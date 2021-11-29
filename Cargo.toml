@@ -1,0 +1,27 @@
+[package]
+name = "gcalc"
+version = "0.1.0"
+edition = "2018"
+license = "MIT OR Apache-2.0"
+keywords = ["cli"]
+categories = ["command-line-utilities"]
+description = "Game probability calculator"
+homepage = "https://github.com/simhyeon/gcalc"
+repository = "https://github.com/simhyeon/gcalc"
+readme = "README.md"
+
+[[bin]]
+name = "gcalc"
+path = "src/bin.rs"
+
+[lib]
+name = "gcalc"
+path = "src/lib.rs"
+
+[features]
+
+[dependencies]
+clap = { version = "3.0.0-beta.2", optional = true }
+colored = {version = "2.0.0", optional = true}
+csv = {version = "1.1.6", optional = true}
+thiserror = "1.0.25"
