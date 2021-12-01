@@ -7,8 +7,14 @@ use crate::utils;
 pub struct Calculator {
     start_probability: f32,
     count: usize,
+    format: TableFormat,
     prob_precision: Option<usize>,
     prob_type: ProbType,
+}
+
+pub enum TableFormat {
+    Console,
+    Csv,
 }
 
 // TODO 
@@ -49,9 +55,15 @@ impl Calculator {
         Ok(Self {
             start_probability,
             count,
+            format: TableFormat::Csv,
             prob_precision: None,
             prob_type: ProbType::Float,
         })
+    }
+
+    pub fn table_format(mut self, format: TableFormat) -> Self {
+        self.format = format;
+        self
     }
 
     pub fn prob_type(mut self, prob_type: ProbType) -> Self {
@@ -80,7 +92,6 @@ impl Calculator {
             self.gsec_single(fail_prob, &mut records, &mut last_sum, index);
         }
 
-        // self.print_csv(vec!["count", "probabilty"],records, (min,max))?;
         self.print_table(vec!["count", "probabilty"],records, (min,max))?;
         Ok(())
     }
@@ -104,7 +115,6 @@ impl Calculator {
         // Don't have to add index becuase index is already added at the final while loop
         self.gsec_single(fail_prob, &mut records, &mut last_sum, index);
 
-        // self.print_csv(vec!["count", "probabilty"],records, (0,index))?;
         self.print_table(vec!["count", "probabilty"],records, (0,index))?;
         Ok(())
     }
@@ -125,7 +135,6 @@ impl Calculator {
         let total_cost = utils::float_to_string(index as f32 * cost.unwrap_or(0f32), &self.prob_precision);
         let values = vec![vec![index.to_string(), total_cost]];
 
-        // self.print_csv(vec!["count", "probabilty"],records, (0,index))?;
         self.print_table(vec!["count", "cost"],values, (0,index))?;
 
         Ok(())
@@ -143,25 +152,6 @@ impl Calculator {
         records.push(vec![(index + 1).to_string(), prob]);
     }
 
-
-    /// Intera method for print table to console
-    fn print_csv(
-        &self,
-        headers: Vec<impl AsRef<str>>,
-        mut values :Vec<Vec<String>>,
-        range: (usize, usize)
-    ) -> GcalcResult<()> {
-        let headers = headers.into_iter().map(|s| s.as_ref().to_owned()).collect();
-        values.insert(0, headers);
-
-        match Formatter::to_csv_string(values, range) {
-            Ok(csv) => println!("{}", csv),
-            Err(err) => return Err(GcalcError::FormatFail(err)),
-        }
-
-        Ok(())
-    }
-
     fn print_table(
         &self,
         headers: Vec<impl AsRef<str>>,
@@ -170,8 +160,18 @@ impl Calculator {
     ) -> GcalcResult<()> {
         let headers = headers.into_iter().map(|s| s.as_ref().to_owned()).collect();
         values.insert(0, headers);
-        let table = Formatter::to_table(values, range);
-        table.printstd();
+
+        match self.format {
+            TableFormat::Csv => {
+                match Formatter::to_csv_string(values, range) {
+                    Ok(csv) => println!("{}", csv),
+                    Err(err) => return Err(GcalcError::FormatFail(err)),
+                }
+            }
+            TableFormat::Console => {
+                Formatter::to_table(values, range).printstd();
+            }
+        }
         Ok(())
     }
     // </INTERNAL>
