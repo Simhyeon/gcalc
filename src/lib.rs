@@ -7,6 +7,6 @@ mod formatter;
 mod models;
 mod utils;
 
-pub use calc::{Calculator, ProbType};
+pub use calc::{Calculator, ProbType, TableFormat};
 pub use error::GcalcError;
 pub use models::GcalcResult;
