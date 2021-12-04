@@ -1,15 +1,30 @@
-use std::fs::File;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use csv::Reader;
 
 use crate::{GcalcResult, GcalcError};
 use crate::formatter::Formatter;
 use crate::utils;
 
+const bonus_prob: usize = 1;
+const basic_prob: usize = 2;
+// const basic_cost      : usize = 3;
+
+// TODO 
+// Csv file
 pub struct Calculator {
     start_probability: f32,
     count: usize,
     format: TableFormat,
+    csv_file: Option<PathBuf>,
+    header_map: Option<HashMap<&'static str, String>>,
     prob_precision: Option<usize>,
     prob_type: ProbType,
+    // Which behaviour to take when csv rows ends
+    // CSVreturn : ReturnType,
+    // -> Eary return and break loop
+    // -> Respect previous value
+    // -> Panic
 }
 
 pub enum TableFormat {
@@ -17,32 +32,10 @@ pub enum TableFormat {
     Csv,
 }
 
-// TODO 
-// INclude this in calculator
-pub enum Destination {
-    File(File),
-    Console,
-}
-
 pub enum ProbType {
     Percentage,
     Float,
 }
-
-// TODO
-// Use minhash
-// for bonus probabilty chart
-// e.g.)
-//
-// 5th fail | 10%+
-// 6th fail | 10%+
-// 7th fail | 12%+
-// 8th fail | 12%+
-//
-// Should be made of 
-// ```rust
-// ThinHash<usize,f32> 
-// ```
 
 impl Calculator {
     // <BUILDER>
@@ -55,6 +48,8 @@ impl Calculator {
         Ok(Self {
             start_probability,
             count,
+            csv_file : None,
+            header_map: None,
             format: TableFormat::Csv,
             prob_precision: None,
             prob_type: ProbType::Float,
@@ -76,6 +71,11 @@ impl Calculator {
         Ok(self)
     }
 
+    pub fn csv_file(mut self, path: impl AsRef<Path>) -> GcalcResult<Self> {
+        self.csv_file.replace(path.as_ref().to_owned());
+        Ok(self)
+    }
+
     // </BUILDER>
 
     // <PROCESSING>
@@ -84,12 +84,34 @@ impl Calculator {
         if max > self.count {
             return Err(GcalcError::InvalidArgument(format!("Given max index {} is bigger than total count : {}",max,self.count)));
         }
-
+        
+        // Total csv records iterator
+        let mut csv_records = if let Some(file) = &self.csv_file {
+            Some(Reader::from_path(file).expect("Failed to read csv from given file").into_records())
+        } else { None };
+        
         let mut records : Vec<Vec<String>> = Vec::new();
         let fail_prob = 1f32 - self.start_probability;
         let mut last_sum = 0f32;
         for index in 0..self.count {
-            self.gsec_single(fail_prob, &mut records, &mut last_sum, index);
+            let mut constant: f32 = 0f32;
+            if let Some(csv) = &mut csv_records {
+                match csv.next() {
+                    Some(row) => {
+                        constant = row.expect("Failed to parse row")
+                            .iter()
+                            .collect::<Vec<&str>>()[bonus_prob]
+                            .parse()
+                            .expect("Failed to parse")
+                    }
+                    None => { 
+                        return Err(GcalcError::CsvError(format!("Empty row in index: {}", index))); 
+                    }
+                }
+            } 
+            
+            let prob = self.get_gsec_single(fail_prob, &mut last_sum, index, constant)?;
+            records.push(vec![(index + 1).to_string(), prob]);
         }
 
         self.print_table(vec!["count", "probabilty"],records, (min,max))?;
@@ -98,22 +120,23 @@ impl Calculator {
 
     pub fn print_until(&self, target_probability: f32) -> GcalcResult<()> {
         if target_probability >= 1.0f32 {
-            return Err(GcalcError::InvalidArgument(format!("Given probabilty {} is bigger than 1.0", target_probability)));
-        }
+            return Err(GcalcError::InvalidArgument(format!("Given probabilty {} is bigger than 1.0", target_probability))); }
 
         let mut records : Vec<Vec<String>> = Vec::new();
         let fail_prob = 1f32 - self.start_probability;
         let mut last_sum = 0f32;
         let mut index = 0;
         while last_sum < target_probability {
-            self.gsec_single(fail_prob, &mut records, &mut last_sum, index);
+            let prob = self.get_gsec_single(fail_prob, &mut last_sum, index, 0.0)?;
+            records.push(vec![(index + 1).to_string(), prob]);
             index = index + 1;
         }
 
         // Caculate once more
         // NOTE
         // Don't have to add index becuase index is already added at the final while loop
-        self.gsec_single(fail_prob, &mut records, &mut last_sum, index);
+        let prob = self.get_gsec_single(fail_prob, &mut last_sum, index, 0.0)?;
+        records.push(vec![(index + 1).to_string(), prob]);
 
         self.print_table(vec!["count", "probabilty"],records, (0,index))?;
         Ok(())
@@ -129,7 +152,8 @@ impl Calculator {
         let mut last_sum = 0f32;
         let mut index = 0;
         while last_sum < target_probability {
-            self.gsec_single(fail_prob, &mut records, &mut last_sum, index);
+            let prob = self.get_gsec_single(fail_prob, &mut last_sum, index, 0.0)?;
+            records.push(vec![(index + 1).to_string(), prob]);
             index = index + 1;
         }
         let total_cost = utils::float_to_string(index as f32 * cost.unwrap_or(0f32), &self.prob_precision);
@@ -145,11 +169,13 @@ impl Calculator {
 
     // <INTERNAL>
     /// Geometric sequence single take
-    fn gsec_single(&self,fail_prob: f32, records: &mut Vec<Vec<String>>, last_sum: &mut f32 ,index: usize) {
+    fn get_gsec_single(&self,fail_prob: f32, last_sum: &mut f32 ,index: usize, constant: f32) -> GcalcResult<String> {
+        utils::prob_sanity_check(fail_prob)?;
+        utils::prob_sanity_check(constant)?;
         let current_success = self.start_probability * ( fail_prob.powi(index as i32) );
-        *last_sum = *last_sum + current_success;
+        *last_sum = (*last_sum + current_success + constant).min(1.0f32);
         let prob = utils::get_prob_as_type(*last_sum, &self.prob_type, &self.prob_precision);
-        records.push(vec![(index + 1).to_string(), prob]);
+        Ok(prob)
     }
 
     fn print_table(
