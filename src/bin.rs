@@ -1,13 +1,13 @@
-use gcalc::{Calculator, ProbType, TableFormat};
 use gcalc::GcalcResult;
+#[cfg(feature = "binary")]
+use gcalc::cli::Cli;
+
+// Usage
+// gcalc -F test.csv -R 0,10 -B budget_number -U until_probabilty
+// Maybe I should take single entry?
 
 fn main() -> GcalcResult<()> {
-    let ca = Calculator::new(0.3,10)?
-        .prob_type(ProbType::Percentage)
-        .precision(2)?
-        .table_format(TableFormat::Console);
-    // ca.print_range(Some((0,10)))?;
-    ca.print_until(0.9f32)?;
-    // ca.print_required(0.9f32, Some( 1000f32 ))?;
+    #[cfg(feature = "binary")]
+    Cli::run()?;
     Ok(())
 }
