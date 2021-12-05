@@ -25,43 +25,57 @@ impl Cli {
                 .arg(Arg::new("precision").about("Precision").short('p').long("precision").takes_value(true))
                 .arg(Arg::new("probtype").about("Probabilty type").short('t').long("type").takes_value(true))
             ) // range subcommand
+            .subcommand(App::new("reference"))
             .get_matches()
     }
 
     fn run_calculator(args: &ArgMatches) -> GcalcResult<()> {
         match args.subcommand() {
             Some(( "range" , range_m)) => {
-                let probabilty = range_m.value_of("PROB").unwrap().parse().expect("Probabilty should be float");
-                utils::prob_sanity_check(probabilty)?;
-                let count = range_m.value_of("count").unwrap().parse().expect("count should be integer");
-                let mut cal = Calculator::new(probabilty,count)?;
-                let mut min = 0;
-
-                if let Some(csv_file) = range_m.value_of("reference") {
-                    cal.set_csv_file(std::path::Path::new(csv_file));
-                }
-
-                if let Some(start) = range_m.value_of("start") {
-                    min = start.parse().expect("Start should be integer");
-                }
-
-                if let Some(format) = range_m.value_of("format") {
-                    cal.set_table_format(TableFormat::from_str(format)?);
-                }
-
-                if let Some(precision) = range_m.value_of("precision") {
-                    cal.set_precision(precision.parse().expect("Failed to get precisino as usize"));
-                }
-
-                if let Some(prob_type) = range_m.value_of("probtype") {
-                    cal.set_prob_type(ProbType::from_str(prob_type)?);
-                }
-
-                cal.print_range(Some((min,count)))?;
+                Self::subcommand_range(range_m)?;
+            }
+            Some(( "reference" , _)) => {
+                Self::subcommand_reference()?;
             }
             _ => eprintln!("No proper sub command was given to the program"),
         }
 
+        Ok(())
+    }
+
+    fn subcommand_range(args: &ArgMatches) -> GcalcResult<()> {
+        let probabilty = args.value_of("PROB").unwrap().parse().expect("Probabilty should be float");
+        utils::prob_sanity_check(probabilty)?;
+        let count = args.value_of("count").unwrap().parse().expect("count should be integer");
+        let mut cal = Calculator::new(probabilty,count)?;
+        let mut min = 0;
+
+        if let Some(csv_file) = args.value_of("reference") {
+            cal.set_csv_file(std::path::Path::new(csv_file));
+        }
+
+        if let Some(start) = args.value_of("start") {
+            min = start.parse().expect("Start should be integer");
+        }
+
+        if let Some(format) = args.value_of("format") {
+            cal.set_table_format(TableFormat::from_str(format)?);
+        }
+
+        if let Some(precision) = args.value_of("precision") {
+            cal.set_precision(precision.parse().expect("Failed to get precisino as usize"));
+        }
+
+        if let Some(prob_type) = args.value_of("probtype") {
+            cal.set_prob_type(ProbType::from_str(prob_type)?);
+        }
+
+        cal.print_range(Some((min,count)))?;
+        Ok(())
+    }
+
+    fn subcommand_reference() -> GcalcResult<()> {
+        std::fs::write(std::path::Path::new("ref.csv"), r#"count,probabilty,bonus,cost"#)?;
         Ok(())
     }
 }
