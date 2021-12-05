@@ -14,6 +14,8 @@ pub enum GcalcError {
     InvalidProb(String),
     #[error("Invalid conversion\n= {0}")]
     InvalidConversion(String),
+    #[error("Invalid conditional calculation\n= {0}")]
+    InvalidConditional(String),
 }
 
 impl From<std::io::Error> for GcalcError {
