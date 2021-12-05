@@ -1,6 +1,6 @@
 mod calc;
 #[cfg(feature = "binary")]
-mod cli;
+pub mod cli;
 mod csv;
 mod error;
 mod formatter;
