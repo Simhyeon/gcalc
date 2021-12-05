@@ -4,13 +4,18 @@
 * [x] Print until desired percentage
 * [x] Print counts of necessary tries for desired percentage and optionally
 print cost
+* [x] Fixed constant logic
+* [x] Bonus percentage information
+* [x] Ergonomic binary usage
+* [x] Qualification subcommand
 
 # TODO
 
-* [ ] Make range much more ergonomic solve the confusion.
-
-* [ ] Bonus percentage
-* [ ] Ergonomic binary usage
+* [ ] Complete panic behaviour
+* [ ] Make proper error branches
+Currently every invalid option panicks with expect method
+* [ ] Custom csv format mapping
+- Because exsiting csv may have different headers and positions
 * [ ] Ergonomic library usage
 * [ ] Info redirection (File or stdout)
 
