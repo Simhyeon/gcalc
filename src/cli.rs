@@ -17,6 +17,7 @@ impl Cli {
             .about("Gcalc is a gacha simulator for game development and other decision makings.") // meta information end
             .subcommand(
                 App::new("cond")
+                .about("Conditional calculation")
                 .arg(Arg::new("PROB").about("Basic probabilty").takes_value(true))
                 .arg(Arg::new("reference").about("Reference file").short('r').long("ref").takes_value(true))
                 .arg(Arg::new("budget").about("Budget of total cost").short('b').long("budget").takes_value(true))
@@ -28,6 +29,7 @@ impl Cli {
             )
             .subcommand(
                 App::new("qual")
+                .about("Conditional calculation but only prints result")
                 .arg(Arg::new("PROB").about("Basic probabilty").takes_value(true))
                 .arg(Arg::new("reference").about("Reference file").short('r').long("ref").takes_value(true))
                 .arg(Arg::new("budget").about("Budget of total cost").short('b').long("budget").takes_value(true))
@@ -39,6 +41,7 @@ impl Cli {
             )
             .subcommand(
                 App::new("range")
+                .about("Prints range of calculations")
                 .arg(Arg::new("PROB").about("Basic probabilty").takes_value(true))
                 .arg(Arg::new("reference").about("Reference file").short('r').long("ref").takes_value(true))
                 .arg(Arg::new("count").required(true).about("Counts to execute").short('c').long("count").takes_value(true))
