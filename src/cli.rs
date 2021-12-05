@@ -27,6 +27,17 @@ impl Cli {
                 .arg(Arg::new("cost").about("Cost per try").short('C').long("cost").takes_value(true))
             )
             .subcommand(
+                App::new("qual")
+                .arg(Arg::new("PROB").about("Basic probabilty").takes_value(true))
+                .arg(Arg::new("reference").about("Reference file").short('r').long("ref").takes_value(true))
+                .arg(Arg::new("budget").about("Budget of total cost").short('b').long("budget").takes_value(true))
+                .arg(Arg::new("target").about("Target probabilty").short('t').long("target").takes_value(true))
+                .arg(Arg::new("format").about("Table format").short('f').long("format").takes_value(true))
+                .arg(Arg::new("precision").about("Precision").short('p').long("precision").takes_value(true))
+                .arg(Arg::new("probtype").about("Probabilty type").short('T').long("type").takes_value(true))
+                .arg(Arg::new("cost").about("Cost per try").short('C').long("cost").takes_value(true))
+            )
+            .subcommand(
                 App::new("range")
                 .arg(Arg::new("PROB").about("Basic probabilty").takes_value(true))
                 .arg(Arg::new("reference").about("Reference file").short('r').long("ref").takes_value(true))
@@ -48,6 +59,9 @@ impl Cli {
             }
             Some(( "cond" , cond_m)) => {
                 Self::subcommand_conditional(cond_m)?;
+            }
+            Some(( "qual" , qual_m)) => {
+                Self::subcommand_qual(qual_m)?;
             }
             Some(( "reference" , _)) => {
                 Self::subcommand_reference()?;
@@ -83,7 +97,7 @@ impl Cli {
         Self::set_calculator_attribute(&mut cal, args)?;
 
         if let Some(target) = args.value_of("target") {
-            cal.set_target_probability(target.parse().expect("Failed to get target prob"));
+            cal.set_target_probability(target.parse().expect("Failed to get target prob"))?;
         }
 
         if let Some(budget) = args.value_of("budget") {
@@ -91,6 +105,23 @@ impl Cli {
         }
 
         cal.print_conditional()?;
+        Ok(())
+    }
+
+    fn subcommand_qual(args: &ArgMatches) -> GcalcResult<()> {
+        let prob = Self::get_sane_probability(args)?;
+        let mut cal = Calculator::new(prob)?;
+        Self::set_calculator_attribute(&mut cal, args)?;
+
+        if let Some(target) = args.value_of("target") {
+            cal.set_target_probability(target.parse().expect("Failed to get target prob"))?;
+        }
+
+        if let Some(budget) = args.value_of("budget") {
+            cal.set_budget(budget.parse().expect("Failed to get budget"));
+        }
+
+        cal.print_qualfication()?;
         Ok(())
     }
 
