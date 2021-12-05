@@ -7,10 +7,14 @@ pub struct Formatter;
 impl Formatter {
     pub fn to_csv_string (
         values :Vec<Vec<String>>,
-        range: (usize,usize)
+        range: Option<(usize,usize)>
     ) -> Result<String, Box<dyn Error>> {
         let mut wtr = WriterBuilder::new().from_writer(vec![]);
-        let (min,max) = range;
+        let (min,max) = if let Some((min,max)) = range {
+            (min,max)
+        } else {
+            (0,values.len())
+        };
 
         for (index, value) in values.iter().enumerate() {
             if index >= min && index <= max {
@@ -23,12 +27,16 @@ impl Formatter {
         Ok(data)
     }
 
-    pub fn to_table(
+    pub fn to_console_table(
         values :Vec<Vec<String>>,
-        range: (usize,usize)
+        range: Option<(usize,usize)>
     ) -> Table {
         let mut table = Table::new();
-        let (min,max) = range;
+        let (min,max) = if let Some((min,max)) = range {
+            (min,max)
+        } else {
+            (0,values.len())
+        };
 
         for (index,row) in values.iter().enumerate() {
             if index >= min && index <= max {
