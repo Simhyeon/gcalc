@@ -147,8 +147,13 @@ impl Calculator {
         self.state.cost = cost;
     }
 
-    pub fn set_target_probability(&mut self, target_probability: f32)  {
+    pub fn set_target_probability(&mut self, target_probability: f32) -> GcalcResult<()> {
+        if target_probability > 1.0f32 || target_probability < 0.0f32 {
+            return Err(GcalcError::InvalidArgument(format!("Given probabilty \"{}\" is should be bigger than 0.0 and smaller than 1.0", target_probability)));
+        }
+
         self.target_probability.replace(target_probability);
+        Ok(())
     }
     
     pub fn set_budget(&mut self, budget: f32) {
@@ -188,22 +193,13 @@ impl Calculator {
         Ok(())
     }
 
-    pub fn print_required(&mut self, target_probability: f32 ,cost: Option<f32>) -> GcalcResult<()> {
-        if target_probability > 1.0f32 {
-            return Err(GcalcError::InvalidArgument(format!("Given probabilty {} is bigger than 1.0", target_probability)));
-        }
-
-        let mut records : Vec<Vec<String>> = Vec::new();
-        let mut index = 0;
-        while self.state.success_until < target_probability {
-            self.update_state_prob()?;
-            let prob_str = utils::get_prob_as_type(self.state.success_until, &self.prob_type, &self.prob_precision);
-            records.push(vec![(index + 1).to_string(), prob_str]);
-            index = index + 1;
-        }
-
-        let total_cost = utils::float_to_string(index as f32 * cost.unwrap_or(0f32), &self.prob_precision);
-        let values = vec![vec![index.to_string(), total_cost]];
+    pub fn print_qualfication(&mut self) -> GcalcResult<()> {
+        let records = self.create_records(false)?;
+        let total_count = records.len();
+        println!("{:?}", records);
+        let values = vec![
+            vec![total_count.to_string(), records[total_count - 1][2].clone() ]
+        ];
 
         self.print_table(vec!["count", "cost"],values, None)?;
 
