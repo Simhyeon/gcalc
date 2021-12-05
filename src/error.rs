@@ -12,6 +12,8 @@ pub enum GcalcError {
     CsvError(String),
     #[error("Invalid probabilty form\n= {0}")]
     InvalidProb(String),
+    #[error("Invalid conversion\n= {0}")]
+    InvalidConversion(String),
 }
 
 impl From<std::io::Error> for GcalcError {
