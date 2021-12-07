@@ -2,16 +2,20 @@ use std::error::Error;
 use csv::WriterBuilder;
 use tabled::{Table, Style};
 
-use crate::models::{Record, Qualficiation};
+use crate::{models::{Record, Qualficiation}, GcalcResult, GcalcError};
 
 pub(crate) struct QualFormatter;
 
 impl QualFormatter {
-    pub fn to_csv_table( qual :Qualficiation) -> Result<String, Box<dyn Error>> {
+    // pub fn to_csv_table( qual :Qualficiation) -> Result<String, Box<dyn Error>> {
+    pub fn to_csv_table( qual :Qualficiation) -> GcalcResult<String> {
         let mut wtr = WriterBuilder::new().from_writer(vec![]);
         wtr.serialize(qual)?;
-        let data = String::from_utf8(wtr.into_inner()?)?;
-
+        let data = String::from_utf8(
+            wtr.into_inner()
+            .map_err(|_| GcalcError::Unknown("Failed to create iterator from struct".to_owned()))?
+        )?;
+// 
         Ok(data)
     }
 
