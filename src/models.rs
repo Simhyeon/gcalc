@@ -57,3 +57,8 @@ pub enum RefCsv {
     File(PathBuf),
     None,
 }
+
+pub enum OutOption {
+    Console,
+    File(PathBuf),
+}
