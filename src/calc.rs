@@ -1,6 +1,8 @@
+use std::path::Path;
+
 use csv::StringRecordsIntoIter;
 
-use crate::models::{Record, Qualficiation, ColumnMap, RefCsv};
+use crate::models::{Record, Qualficiation, ColumnMap, RefCsv, OutOption};
 use crate::{GcalcResult, GcalcError};
 use crate::formatter::{RecordFormatter, QualFormatter};
 use crate::utils;
@@ -21,6 +23,7 @@ pub struct Calculator {
     prob_type: ProbType,
     // Which behaviour to take when csv rows ends
     behaviour: CsvBehaviour,
+    out_option: OutOption,
 }
 
 enum CsvBehaviour {
@@ -101,6 +104,7 @@ impl Calculator {
             budget: None,
             prob_type: ProbType::Float,
             behaviour : CsvBehaviour::Repeat,
+            out_option: OutOption::Console,
         })
     }
 
@@ -155,6 +159,11 @@ impl Calculator {
         self
     }
 
+    pub fn out_file(mut self, path: &Path) -> Self {
+        self.out_option= OutOption::File(path.to_owned());
+        self
+    }
+
     // </BUILDER>
     
     // <Setter>
@@ -199,6 +208,11 @@ impl Calculator {
     pub fn set_csv_file(&mut self, csv_reference: RefCsv) {
         self.csv_ref = csv_reference;
     }
+
+    pub fn set_out_file(&mut self, path: &Path) {
+        self.out_option = OutOption::File(path.to_owned());
+    }
+
     // </Setter>
 
     // <PROCESSING>
@@ -222,7 +236,7 @@ impl Calculator {
         let total_count = records.len();
         let total_cost = records.last().unwrap_or(&Record::new(0,"".to_string(), 0.0)).cost;
 
-        self.print_qual_table(total_count, total_cost);
+        self.print_qual_table(total_count, total_cost)?;
 
         Ok(())
     }
@@ -290,25 +304,26 @@ impl Calculator {
     fn update_state_from_csv_file(&mut self, csv_records :&mut StringRecordsIntoIter<&[u8]>, index: usize) -> GcalcResult<()> {
         match csv_records.next() {
             Some(row) => {
-                let row = row.expect("Failed to parse row"); // Temporary bound
+                // Temporary bound
+                let row = row?;
                 let row = row.iter().collect::<Vec<&str>>();
 
                 if row.len() > self.column_map.probability {
                     self.state.probability = row[self.column_map.probability]
                         .parse()
-                        .expect("Failed to parse");
+                        .map_err(|_| GcalcError::ParseError(format!("Probability should be a float number, but the value in ({},{}) is not", index + 1, self.column_map.probability)))?;
                 }
 
                 if row.len() > self.column_map.added {
                     self.state.constant = row[self.column_map.added]
                         .parse()
-                        .expect("Failed to parse");
+                        .map_err(|_| GcalcError::ParseError(format!("Added probability should be a float number, but the value in ({},{}) is not", index + 1, self.column_map.added)))?;
                 }
 
                 if row.len() > self.column_map.cost {
                     self.state.cost = row[self.column_map.cost]
                         .parse()
-                        .expect("Failed to parse");
+                        .map_err(|_| GcalcError::ParseError(format!("Cost should be a float number, but the value in ({},{}) is not", index + 1, self.column_map.cost)))?;
                 }
             }
             None => { 
@@ -371,14 +386,14 @@ impl Calculator {
                 RecordFormatter::to_styled_table(records, range, tabled::Style::github_markdown())
             }
         };
-        print!("{}", formatted);
+        self.yield_table(&formatted)?;
         Ok(())
     }
 
-    fn print_qual_table(&self, count: usize, cost: f32) {
+    fn print_qual_table(&self, count: usize, cost: f32) -> GcalcResult<()> {
         let formatted = match self.format {
             TableFormat::Csv => {
-                QualFormatter::to_csv_table(Qualficiation::new(count, cost)).expect("Failed to get csv table from qualification")
+                QualFormatter::to_csv_table(Qualficiation::new(count, cost))?
             }
             TableFormat::Console => {
                 QualFormatter::to_styled_table(Qualficiation::new(count, cost), tabled::Style::default())
@@ -387,8 +402,21 @@ impl Calculator {
                 QualFormatter::to_styled_table(Qualficiation::new(count, cost), tabled::Style::github_markdown())
             }
         };
-        print!("{}", &formatted);
+        self.yield_table(&formatted)?;
+        Ok(())
+    }
 
+    fn yield_table(&self, table: &str) -> GcalcResult<()> {
+        match &self.out_option {
+            OutOption::Console => print!("{}", table),
+            OutOption::File(path) => {
+                if let Err(err) = std::fs::write(path, table.as_bytes()) {
+                    eprintln!("File \"{}\" cannot be used as output redirection.", path.display());
+                    return Err(GcalcError::StdIo(err));
+                }
+            }
+        }
+        Ok(())
     }
     // </INTERNAL>
 }
