@@ -5,7 +5,7 @@ use crate::{calc::ProbType, GcalcResult, GcalcError};
 /// Available types are
 /// - Percentage
 /// - Floating number
-pub fn get_prob_as_type(mut num: f32, prob_type: &ProbType, precision: &Option<usize>) -> String {
+pub fn get_prob_as_formatted(mut num: f32, prob_type: &ProbType, precision: &Option<usize>) -> String {
     let mut num_string: String;
 
     // Add percentage
