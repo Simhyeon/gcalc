@@ -27,10 +27,11 @@ impl Cli {
                 .arg(Arg::new("target").about("Target probability").short('t').long("target").takes_value(true))
                 .arg(Arg::new("format").about("Table format").short('f').long("format").takes_value(true))
                 .arg(Arg::new("precision").about("Precision").short('p').long("precision").takes_value(true))
-                .arg(Arg::new("probtype").about("Probabilty type").short('T').long("type").takes_value(true))
+                .arg(Arg::new("probtype").about("Probability type").short('T').long("type").takes_value(true))
                 .arg(Arg::new("cost").about("Cost per try").short('C').long("cost").takes_value(true))
                 .arg(Arg::new("column").about("Column mapping").short('l').long("column").takes_value(true))
                 .arg(Arg::new("noheader").about("CSV without header").long("noheader"))
+                .arg(Arg::new("out").about("Out file").short('o').long("out").takes_value(true))
             )
             .subcommand(
                 App::new("qual")
@@ -42,10 +43,11 @@ impl Cli {
                 .arg(Arg::new("target").about("Target probability").short('t').long("target").takes_value(true))
                 .arg(Arg::new("format").about("Table format").short('f').long("format").takes_value(true))
                 .arg(Arg::new("precision").about("Precision").short('p').long("precision").takes_value(true))
-                .arg(Arg::new("probtype").about("Probabilty type").short('T').long("type").takes_value(true))
+                .arg(Arg::new("probtype").about("Probability type").short('T').long("type").takes_value(true))
                 .arg(Arg::new("cost").about("Cost per try").short('C').long("cost").takes_value(true))
                 .arg(Arg::new("column").about("Column mapping").short('l').long("column").takes_value(true))
                 .arg(Arg::new("noheader").about("CSV without header").long("noheader"))
+                .arg(Arg::new("out").about("Out file").short('o').long("out").takes_value(true))
             )
             .subcommand(
                 App::new("range")
@@ -57,10 +59,11 @@ impl Cli {
                 .arg(Arg::new("start").about("Starting index to print").short('s').long("start").takes_value(true))
                 .arg(Arg::new("format").about("Table format").short('f').long("format").takes_value(true))
                 .arg(Arg::new("precision").about("Precision").short('p').long("precision").takes_value(true))
-                .arg(Arg::new("probtype").about("Probabilty type").short('T').long("type").takes_value(true))
+                .arg(Arg::new("probtype").about("Probability type").short('T').long("type").takes_value(true))
                 .arg(Arg::new("cost").about("Cost per try").short('C').long("cost").takes_value(true))
                 .arg(Arg::new("column").about("Column mapping").short('l').long("column").takes_value(true))
                 .arg(Arg::new("noheader").about("CSV without header").long("noheader"))
+                .arg(Arg::new("out").about("Out file").short('o').long("out").takes_value(true))
             ) // "range" subcommand
             .subcommand(App::new("reference")) // "reference" file creation subcommand
             .get_matches()
@@ -91,12 +94,13 @@ impl Cli {
         let count = args.value_of("count")
             .unwrap()
             .parse()
-            .expect("count should be an integer");
+            .map_err( |_| GcalcError::ParseError("Count should be a positive integer".to_owned()))?;
 
         let mut cal = Calculator::new(probability)?;
         let mut min = 0;
         if let Some(index) = args.value_of("start") {
-            min = index.parse().expect("Failed to get precisino as usize");
+            min = index.parse()
+                .map_err( |_| GcalcError::ParseError("Start index should be a positive integer (usize)".to_owned()))?;
         }
         Self::set_calculator_attribute(&mut cal, args)?;
 
@@ -111,11 +115,13 @@ impl Cli {
         Self::set_calculator_attribute(&mut cal, args)?;
 
         if let Some(target) = args.value_of("target") {
-            cal.set_target_probability(target.parse().expect("Failed to get target prob"))?;
+            let prob = target.parse().map_err( |_| GcalcError::ParseError("Target should be a float within 0.0 ~ 1.0".to_owned()))?;
+            cal.set_target_probability(prob)?;
         }
 
         if let Some(budget) = args.value_of("budget") {
-            cal.set_budget(budget.parse().expect("Failed to get budget"));
+            let budget = budget.parse().map_err( |_| GcalcError::ParseError("Budget should be a number".to_owned()))?;
+            cal.set_budget(budget);
         }
 
         cal.print_conditional()?;
@@ -128,11 +134,13 @@ impl Cli {
         Self::set_calculator_attribute(&mut cal, args)?;
 
         if let Some(target) = args.value_of("target") {
-            cal.set_target_probability(target.parse().expect("Failed to get target prob"))?;
+            let prob = target.parse().map_err( |_| GcalcError::ParseError("Target should be a float within 0.0 ~ 1.0".to_owned()))?;
+            cal.set_target_probability(prob)?;
         }
 
         if let Some(budget) = args.value_of("budget") {
-            cal.set_budget(budget.parse().expect("Failed to get budget"));
+            let budget = budget.parse().map_err( |_| GcalcError::ParseError("Budget should be a number".to_owned()))?;
+            cal.set_budget(budget);
         }
 
         cal.print_qualfication()?;
@@ -145,14 +153,15 @@ impl Cli {
         let probability = args.value_of("PROB")
             .unwrap_or("1.0")
             .parse()
-            .expect("Probabilty should be float");
+            .map_err( |_| GcalcError::ParseError("Probability should be a float within 0.0 ~ 1.0".to_owned()))?;
         utils::prob_sanity_check(probability)?;
         Ok(probability)
     }
 
     fn set_calculator_attribute(cal : &mut Calculator, args: &ArgMatches) -> GcalcResult<()> {
         if let Some(cost) = args.value_of("cost") {
-            cal.set_cost(cost.parse().expect("Failed to get cost"));
+            let cost = cost.parse().map_err( |_| GcalcError::ParseError("Cost should be a number".to_owned()))?;
+            cal.set_cost(cost);
         }
 
         // Reference and refin is mutual exclusive
@@ -170,11 +179,17 @@ impl Cli {
         }
 
         if let Some(precision) = args.value_of("precision") {
-            cal.set_precision(precision.parse().expect("Failed to get precisino as usize"));
+            let precision = precision.parse()
+                .map_err( |_| GcalcError::ParseError("Precision should be a positive integer (usize)".to_owned()))?;
+            cal.set_precision(precision);
         }
 
         if let Some(prob_type) = args.value_of("probtype") {
             cal.set_prob_type(ProbType::from_str(prob_type)?);
+        }
+
+        if let Some(file) = args.value_of("out") {
+            cal.set_out_file(std::path::Path::new(file));
         }
 
         Self::set_custom_column_order(cal, args)?;
@@ -190,8 +205,8 @@ impl Cli {
     fn set_custom_column_order(cal : &mut Calculator, args: &ArgMatches) -> GcalcResult<()> {
         if let Some(order) = args.value_of("column") {
             let split_orders = order.split(',').collect::<Vec<&str>>();
-            if split_orders.len() != COLUMN_LEN {
-                return Err(GcalcError::InvalidArgument(format!("Column's length should be \"{}\"", COLUMN_LEN)));
+            if split_orders.len() < COLUMN_LEN {
+                return Err(GcalcError::InvalidArgument(format!("Column's length should be bigger or equal to \"{}\"", COLUMN_LEN)));
             }
             let (mut count, mut probability, mut added, mut cost) = (COUNT_INDEX, BASIC_PROB_INDEX, ADDED_PROB_INDEX, COST_INDEX);
             for (index, &item) in split_orders.iter().enumerate() {
@@ -200,7 +215,7 @@ impl Cli {
                     "probability" => probability = index,
                     "added" => added = index,
                     "cost" => cost = index,
-                    _ => return Err(GcalcError::InvalidArgument(format!("Unsupported header item : \"{}\"", item))),
+                    _ => (), // Skip item
                 }
             } 
             cal.set_column_map(ColumnMap::new(count, probability, added, cost));
