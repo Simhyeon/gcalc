@@ -8,6 +8,10 @@ use gcalc::cli::Cli;
 
 fn main() -> GcalcResult<()> {
     #[cfg(feature = "binary")]
-    Cli::run()?;
+
+    if let Err(err) = Cli::run() {
+        // Propagate error to stdout
+        eprintln!("{}", err);
+    }
     Ok(())
 }
