@@ -25,4 +25,5 @@ binary = ["clap"]
 clap = { version = "3.0.0-beta.2", default-features = false, features = ["std"], optional=true}
 csv = "1.1.6"
 thiserror = "1.0.25"
-prettytable-rs = "^0.8"
+serde = { version = "1.0.126", features = ["derive"]}
+tabled = "0.3.0"
