@@ -1,15 +1,10 @@
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-use csv::{Reader, StringRecordsIntoIter};
+use csv::StringRecordsIntoIter;
 
+use crate::models::{Record, Qualficiation, ColumnMap, RefCsv};
 use crate::{GcalcResult, GcalcError};
-use crate::formatter::Formatter;
+use crate::formatter::{RecordFormatter, QualFormatter};
 use crate::utils;
-
-// const COUNT_INDEX       : usize = 0;
-const BASIC_PROB_INDEX  : usize = 1;
-const BONUS_PROB_INDEX  : usize = 2;
-const BASIC_COST_INDEX  : usize = 3;
+use crate::consts::*;
 
 // TODO 
 // Csv file
@@ -17,8 +12,9 @@ pub struct Calculator {
     state: CalcState,
     count: usize,
     format: TableFormat,
-    csv_file: Option<PathBuf>,
-    header_map: Option<HashMap<&'static str, String>>,
+    csv_ref: RefCsv,
+    csv_no_header: bool,
+    column_map: ColumnMap,
     prob_precision: Option<usize>,
     budget: Option<f32>,
     target_probability : Option<f32>,
@@ -42,9 +38,9 @@ struct CalcState {
 }
 
 impl CalcState {
-    pub fn new(probabilty: f32) -> Self {
+    pub fn new(probability: f32) -> Self {
         Self {
-            probability: probabilty,
+            probability,
             constant: 0.0,
             cost: 0.0,
             success_until: 0.0,
@@ -56,6 +52,7 @@ impl CalcState {
 pub enum TableFormat {
     Console,
     Csv,
+    GFM,
 }
 
 impl TableFormat {
@@ -63,6 +60,7 @@ impl TableFormat {
         match string.to_lowercase().as_str() {
             "console" => Ok(Self::Console),
             "csv" => Ok(Self::Csv),
+            "gfm" | "github" => Ok(Self::GFM),
             _ => Err(GcalcError::InvalidConversion(format!("{} is not a valid table format", string))),
         }
     }
@@ -88,14 +86,15 @@ impl Calculator {
     // Constructor methods
     pub fn new(start_probability: f32) -> GcalcResult<Self> {
         if start_probability > 1.0f32 {
-            return Err(GcalcError::InvalidArgument(format!("Given probabilty of {} which should not be bigger than 1.0", start_probability)));
+            return Err(GcalcError::InvalidArgument(format!("Given probability of {} which should not be bigger than 1.0", start_probability)));
         }
 
         Ok(Self {
             state : CalcState::new(start_probability),
             count : 0,
-            csv_file : None,
-            header_map: None,
+            csv_ref : RefCsv::None,
+            csv_no_header: false,
+            column_map: ColumnMap::new(COUNT_INDEX, BASIC_PROB_INDEX, ADDED_PROB_INDEX, COST_INDEX),
             format: TableFormat::Csv,
             prob_precision: None,
             target_probability: None,
@@ -103,6 +102,22 @@ impl Calculator {
             prob_type: ProbType::Float,
             behaviour : CsvBehaviour::Repeat,
         })
+    }
+
+    pub fn no_header(mut self, tv: bool) -> Self {
+        self.csv_no_header = tv;
+        self
+    }
+
+    pub fn column_map(mut self, column_map: ColumnMap) -> Self {
+        self.column_map = column_map;
+        self
+    }
+
+    pub fn panic_on_invlaid_csv(mut self, tv: bool) -> Self {
+        if tv { self.behaviour = CsvBehaviour::Panic }
+        else { self.behaviour = CsvBehaviour::Repeat }
+        self
     }
 
     pub fn target_probability(mut self, target_probability: f32) -> Self {
@@ -130,8 +145,8 @@ impl Calculator {
         self
     }
 
-    pub fn csv_file(mut self, path: impl AsRef<Path>) -> Self {
-        self.csv_file.replace(path.as_ref().to_owned());
+    pub fn csv_ref(mut self, csv_reference: RefCsv) -> Self {
+        self.csv_ref = csv_reference;
         self
     }
 
@@ -143,13 +158,22 @@ impl Calculator {
     // </BUILDER>
     
     // <Setter>
+    
+    pub fn set_column_map(&mut self, column_map: ColumnMap) {
+        self.column_map = column_map;
+    }
+
+    pub fn set_no_header(&mut self, tv: bool) {
+        self.csv_no_header = tv;
+    }
+
     pub fn set_cost(&mut self, cost: f32) {
         self.state.cost = cost;
     }
 
     pub fn set_target_probability(&mut self, target_probability: f32) -> GcalcResult<()> {
         if target_probability > 1.0f32 || target_probability < 0.0f32 {
-            return Err(GcalcError::InvalidArgument(format!("Given probabilty \"{}\" is should be bigger than 0.0 and smaller than 1.0", target_probability)));
+            return Err(GcalcError::InvalidArgument(format!("Given probability \"{}\" is should be bigger than 0.0 and smaller than 1.0", target_probability)));
         }
 
         self.target_probability.replace(target_probability);
@@ -172,69 +196,75 @@ impl Calculator {
         self.prob_precision.replace(precision);
     }
 
-    pub fn set_csv_file(&mut self, path: impl AsRef<Path>) {
-        self.csv_file.replace(path.as_ref().to_owned());
+    pub fn set_csv_file(&mut self, csv_reference: RefCsv) {
+        self.csv_ref = csv_reference;
     }
     // </Setter>
 
     // <PROCESSING>
     pub fn print_range(&mut self, count: usize,start_index: Option<usize>) -> GcalcResult<()> {
+        // Update count for calculation
         self.count = count;
         let records = self.create_records(true)?;
-
-        self.print_table(vec!["count", "probabilty", "cost"],records, Some((start_index.unwrap_or(0),self.count)))?;
+        self.print_records(records, Some((start_index.unwrap_or(0),self.count)))?;
         Ok(())
     }
 
     pub fn print_conditional(&mut self) -> GcalcResult<()> {
         let records = self.create_records(false)?;
-
-        self.print_table(vec!["count", "probabilty", "cost"],records, None)?;
+        self.print_records(records, None)?;
         Ok(())
     }
 
     pub fn print_qualfication(&mut self) -> GcalcResult<()> {
         let records = self.create_records(false)?;
-        let total_count = records.len();
-        println!("{:?}", records);
-        let values = vec![
-            vec![total_count.to_string(), records[total_count - 1][2].clone() ]
-        ];
 
-        self.print_table(vec!["count", "cost"],values, None)?;
+        let total_count = records.len();
+        let total_cost = records.last().unwrap_or(&Record::new(0,"".to_string(), 0.0)).cost;
+
+        self.print_qual_table(total_count, total_cost);
 
         Ok(())
     }
 
     /// Creat recors accroding to miscellaenous states
-    fn create_records(&mut self, use_range:bool) -> GcalcResult<Vec<Vec<String>>> {
+    fn create_records(&mut self, use_range:bool) -> GcalcResult<Vec<Record>> {
 
-        // !use_range means it is used as conditional loop
+        // "!use_range" (negation of use range) means it is used as conditional loop
         // Thus, at least one condition should be given or say sanity check 
         if !use_range { self.conditional_sanity_check()?; }
 
-        // Total csv records iterator
-        let mut csv_records = if let Some(file) = &self.csv_file {
-            Some(Reader::from_path(file).expect("Failed to read csv from given file").into_records())
-        } else { None };
+        // Uniform format of csv value as string
+        let csv_value = match &self.csv_ref {
+            RefCsv::File(file) => std::fs::read_to_string(file)?,
+            RefCsv::Raw(string) => string.clone(),
+            RefCsv::None => "".to_owned()
+        };
 
-        let mut records : Vec<Vec<String>> = Vec::new();
+        // Total csv records iterator
+        let mut csv_record = csv::ReaderBuilder::new()
+            .has_headers(!self.csv_no_header)
+            .from_reader(csv_value.as_bytes())
+            .into_records();
+
+        let mut records : Vec<Record> = Vec::new();
         let mut total_cost = 0f32;
         let mut index = 0;
 
         loop {
-            self.update_state_from_csv_file(&mut csv_records, index)?;
-            self.update_state_prob()?;
+            // Only if csv value is not empty, update the state from csv value(file)
+            if csv_value != "" { self.update_state_from_csv_file(&mut csv_record, index)?; }
+            self.calculate_fail_success()?;
 
-            let prob_str = utils::get_prob_as_type(
+            let prob_str = utils::get_prob_as_formatted(
                 self.state.success_until,
                 &self.prob_type,
                 &self.prob_precision
             );
-            records.push(vec![(index + 1).to_string(), prob_str, total_cost.to_string()]);
+            records.push(Record::new(index + 1,prob_str.to_owned(), total_cost));
             total_cost = total_cost + self.state.cost;
             
-            // If current probabilty is bigger than target_probability break
+            // If current probability is bigger than target_probability break
             if let Some(target) = self.target_probability {
                 if self.state.success_until > target { break; }
             }
@@ -257,44 +287,44 @@ impl Calculator {
 
 
     // <INTERNAL>
-    fn update_state_from_csv_file(&mut self, csv_reader :&mut Option<StringRecordsIntoIter<std::fs::File>>, index: usize) -> GcalcResult<()> {
-        if let Some(csv) = csv_reader {
-            match csv.next() {
-                Some(row) => {
-                    let row = row.expect("Failed to parse row"); // Temporary bound
-                    let row = row.iter().collect::<Vec<&str>>();
+    fn update_state_from_csv_file(&mut self, csv_records :&mut StringRecordsIntoIter<&[u8]>, index: usize) -> GcalcResult<()> {
+        match csv_records.next() {
+            Some(row) => {
+                let row = row.expect("Failed to parse row"); // Temporary bound
+                let row = row.iter().collect::<Vec<&str>>();
 
-                    if row.len() > BONUS_PROB_INDEX {
-                        self.state.constant = row[BONUS_PROB_INDEX]
-                            .parse()
-                            .expect("Failed to parse");
-                    }
-                    if row.len() > BASIC_PROB_INDEX {
-                        self.state.probability = row[BASIC_PROB_INDEX]
-                            .parse()
-                            .expect("Failed to parse");
-                    }
-                    if row.len() > BASIC_COST_INDEX {
-                        self.state.cost = row[BASIC_COST_INDEX]
-                            .parse()
-                            .expect("Failed to parse");
-                    }
+                if row.len() > self.column_map.probability {
+                    self.state.probability = row[self.column_map.probability]
+                        .parse()
+                        .expect("Failed to parse");
                 }
-                None => { 
-                    match self.behaviour {
-                        CsvBehaviour::Repeat => (), // Do nothing & respect previous value,
-                        CsvBehaviour::Panic => {
-                            return Err(GcalcError::CsvError(format!("Empty row in index: {}", index))); 
-                        }
+
+                if row.len() > self.column_map.added {
+                    self.state.constant = row[self.column_map.added]
+                        .parse()
+                        .expect("Failed to parse");
+                }
+
+                if row.len() > self.column_map.cost {
+                    self.state.cost = row[self.column_map.cost]
+                        .parse()
+                        .expect("Failed to parse");
+                }
+            }
+            None => { 
+                match self.behaviour {
+                    CsvBehaviour::Repeat => (), // Do nothing & respect previous value,
+                    CsvBehaviour::Panic => {
+                        return Err(GcalcError::CsvError(format!("Empty row in index: {}", index))); 
                     }
                 }
             }
-        } 
+        }
         Ok(())
     }
 
-    /// Update state probability
-    fn update_state_prob(&mut self) -> GcalcResult<()> {
+    /// calculate fail success
+    fn calculate_fail_success(&mut self) -> GcalcResult<()> {
         utils::prob_sanity_check(self.state.constant)?;
         // Current indenpendent success rate
         let success = (self.state.probability + self.state.constant).min(1.0f32);
@@ -311,38 +341,54 @@ impl Calculator {
             return Err(GcalcError::InvalidConditional(format!("Either target probability or budget should be present")));
         }
 
-        if self.csv_file == None && self.budget != None && self.state.cost == 0.0 {
+        if self.csv_ref == RefCsv::None && self.budget != None && self.state.cost == 0.0 {
             return Err(GcalcError::InvalidConditional(format!("0 cost with budget will incur infinite loop")));
         }
 
-        if self.csv_file == None && self.target_probability != None && self.state.probability == 0.0 {
+        if self.csv_ref == RefCsv::None && self.target_probability != None && self.state.probability == 0.0 {
             return Err(GcalcError::InvalidConditional(format!("0 probability with target probability will incur infinite loop")));
         }
 
         Ok(())
     }
 
-    fn print_table(
+    fn print_records(
         &self,
-        headers: Vec<impl AsRef<str>>,
-        mut values :Vec<Vec<String>>,
+        records :Vec<Record>,
         range: Option<(usize, usize)>
     ) -> GcalcResult<()> {
-        let headers = headers.into_iter().map(|s| s.as_ref().to_owned()).collect();
-        values.insert(0, headers);
-
-        match self.format {
+        let formatted = match self.format {
             TableFormat::Csv => {
-                match Formatter::to_csv_string(values, range) {
-                    Ok(csv) => println!("{}", csv),
+                match RecordFormatter::to_raw_csv(records, range) {
+                    Ok(csv) => csv,
                     Err(err) => return Err(GcalcError::FormatFail(err)),
                 }
             }
             TableFormat::Console => {
-                Formatter::to_console_table(values, range).printstd();
+                RecordFormatter::to_styled_table(records, range, tabled::Style::default())
             }
-        }
+            TableFormat::GFM => {
+                RecordFormatter::to_styled_table(records, range, tabled::Style::github_markdown())
+            }
+        };
+        print!("{}", formatted);
         Ok(())
+    }
+
+    fn print_qual_table(&self, count: usize, cost: f32) {
+        let formatted = match self.format {
+            TableFormat::Csv => {
+                QualFormatter::to_csv_table(Qualficiation::new(count, cost)).expect("Failed to get csv table from qualification")
+            }
+            TableFormat::Console => {
+                QualFormatter::to_styled_table(Qualficiation::new(count, cost), tabled::Style::default())
+            }
+            TableFormat::GFM => {
+                QualFormatter::to_styled_table(Qualficiation::new(count, cost), tabled::Style::github_markdown())
+            }
+        };
+        print!("{}", &formatted);
+
     }
     // </INTERNAL>
 }
