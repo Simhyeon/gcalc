@@ -8,16 +8,20 @@ print cost
 * [x] Bonus percentage information
 * [x] Ergonomic binary usage
 * [x] Qualification subcommand
+* [x] No header option
+* [x] Create a uniform csv struct for faster writing
+* [x] Make csv reader get either file or csv string in a form of bufreader
+* [x] Custom csv format mapping
+* [x] Info redirection (File or stdout)
+* [x] Make proper error branches
 
 # TODO
 
-* [ ] Complete panic behaviour
-* [ ] Make proper error branches
-Currently every invalid option panicks with expect method
-* [ ] Custom csv format mapping
-- Because exsiting csv may have different headers and positions
-* [ ] Ergonomic library usage
-* [ ] Info redirection (File or stdout)
+* [ ] Make various probabilties formats supported
+- Currently only float value is accepted which may be not so good 
+- Values such as 10 ( number bigger than 1.0 ) or 10% may be fed to program
+* [-] Ergonomic library usage
+- Kind of already?
 
 ### First usage
 
