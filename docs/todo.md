@@ -14,14 +14,17 @@ print cost
 * [x] Custom csv format mapping
 * [x] Info redirection (File or stdout)
 * [x] Make proper error branches
+* [x] Make various probabilties formats supported
+* [x] Fallable csv
+* [x] Panic option - Only for lib usage
+* [x] Make proper readme (Demo usage)
+* [-] Ergonomic library usage
+* [x] Prevent infinite loop
 
 # TODO
 
-* [ ] Make various probabilties formats supported
-- Currently only float value is accepted which may be not so good 
-- Values such as 10 ( number bigger than 1.0 ) or 10% may be fed to program
-* [-] Ergonomic library usage
-- Kind of already?
+* [ ] Create wasm file
+* [ ] Use github release api for automated draft
 
 ### First usage
 
