@@ -35,6 +35,12 @@ which prints a table with the help from
 
 ```
 
+## Install
+
+```bash
+cargo install --features binary --locked
+```
+
 ## Usage
 
 ```bash
