@@ -62,3 +62,8 @@ pub enum OutOption {
     Console,
     File(PathBuf),
 }
+
+pub enum RecordCursor {
+    Next,
+    Stay,
+}
