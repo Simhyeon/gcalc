@@ -216,7 +216,8 @@ impl Calculator {
             .into_records();
 
         let mut records : Vec<Record> = Vec::new();
-        let mut total_cost = 0f32;
+        // This is because first try also consumes cost
+        let mut total_cost = self.state.cost;
         let mut record_index = 0;
         let mut csv_index = 0;
         let mut cursor : RecordCursor;
@@ -339,12 +340,18 @@ impl Calculator {
             return Err(GcalcError::InvalidConditional(format!("Either target probability or budget should be present")));
         }
 
-        if self.csv_ref == RefCsv::None && self.budget != None && self.state.cost == 0.0 {
-            return Err(GcalcError::InvalidConditional(format!("0 cost with budget will incur infinite loop")));
-        }
-
-        if self.csv_ref == RefCsv::None && self.target_probability != None && self.state.probability == 0.0 {
-            return Err(GcalcError::InvalidConditional(format!("0 probability with target probability will incur infinite loop")));
+        if self.csv_ref == RefCsv::None { // No ref file
+            if self.budget != None && self.state.cost == 0.0 {
+                return Err(GcalcError::InvalidConditional(format!("0 cost with budget will incur infinite loop")));
+            }
+            if self.target_probability != None && self.state.probability == 0.0 {
+                return Err(GcalcError::InvalidConditional(format!("0 probability with static target probability will incur infinite loop")));
+            }
+            if let Some(num) = self.target_probability {
+                if num == 1.0f32 && self.state.constant < 1.0f32 {
+                    return Err(GcalcError::InvalidConditional(format!("1.0 probability cannot be reached. Use reference file if you need tailored control over probability.")));
+                }
+            }
         }
 
         Ok(())
