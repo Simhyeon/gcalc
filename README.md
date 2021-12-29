@@ -37,8 +37,15 @@ which prints a table with the help from
 
 ## Install
 
+**binary**
 ```bash
-cargo install --features binary --locked
+cargo install gcalc --features binary --locked
+```
+
+**libary**
+```toml
+[dependencies]
+gcalc = "0.1.0"
 ```
 
 ## Usage
