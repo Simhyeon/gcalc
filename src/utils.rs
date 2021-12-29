@@ -1,5 +1,39 @@
 use crate::{calc::ProbType, GcalcResult, GcalcError};
 
+/// Get probabilty as lenient as possible
+pub fn get_prob_alap(number_str: &str, suffix: Option<&str>) -> GcalcResult<f32> {
+    let prob : f32;
+    let mut number = number_str.to_owned();
+
+    // Remove general suffix
+    if number.ends_with("%") {
+        number.pop();
+    }
+
+    // Remove custom suffix
+    if let Some(suffix) = suffix {
+        if number.ends_with(suffix) {
+            number = number.trim_end_matches(suffix).to_owned();
+        }
+    }
+
+    let number = number.parse::<f32>().expect("Failed to parse number as f32");
+
+    if number > 0.0f32 { 
+        // CASE : 0.0 <= num <= 1.0
+        if number <= 1.0f32 { 
+            prob = number;
+        } else if number <= 100.0f32 { // CASE : 1.0 < num <= 100.0
+            prob = number / 100.0f32;
+        } else {
+            return Err(GcalcError::InvalidProb(format!("Probability {} is not a valid format", number_str)));
+        }
+        Ok(prob)
+    } else {
+        Err(GcalcError::InvalidProb(format!("Probability {} is not a valid format", number_str)))
+    }
+}
+
 /// Get probabilty according to given type
 ///
 /// Available types are
@@ -28,13 +62,5 @@ pub fn float_to_string(num: f32, precision: &Option<usize>) -> String {
         format!("{:.1$}",num,precision)
     } else {
         format!("{}",num)
-    }
-}
-
-pub fn prob_sanity_check(num: f32) -> GcalcResult<()> {
-    if num > 1.0f32 {
-        return Err(GcalcError::InvalidProb(format!("Given number : {} is bigger than 1.0", num)));
-    } else {
-        Ok(())
     }
 }
