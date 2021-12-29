@@ -57,6 +57,7 @@ impl Cli {
                 .arg(Arg::new("refin").about("Reference from stdin").long("refin").conflicts_with("reference"))
                 .arg(Arg::new("count").required(true).about("Counts to execute").short('c').long("count").takes_value(true))
                 .arg(Arg::new("start").about("Starting index to print").short('s').long("start").takes_value(true))
+                // .arg(Arg::new("panic").about("Panics when csv value doesn't match range").short('b').long("budget").takes_value(true))
                 .arg(Arg::new("format").about("Table format").short('f').long("format").takes_value(true))
                 .arg(Arg::new("precision").about("Precision").short('p').long("precision").takes_value(true))
                 .arg(Arg::new("probtype").about("Probability type").short('T').long("type").takes_value(true))
@@ -65,7 +66,7 @@ impl Cli {
                 .arg(Arg::new("noheader").about("CSV without header").long("noheader"))
                 .arg(Arg::new("out").about("Out file").short('o').long("out").takes_value(true))
             ) // "range" subcommand
-            .subcommand(App::new("reference")) // "reference" file creation subcommand
+            .subcommand(App::new("reference").about("Create reference file")) // "reference" file creation subcommand
             .get_matches()
     }
 
@@ -148,13 +149,10 @@ impl Cli {
     }
 
     // Utils, DRY codes
-
     fn get_sane_probability(args: &ArgMatches) -> GcalcResult<f32> {
         let probability = args.value_of("PROB")
-            .unwrap_or("1.0")
-            .parse()
-            .map_err( |_| GcalcError::ParseError("Probability should be a float within 0.0 ~ 1.0".to_owned()))?;
-        utils::prob_sanity_check(probability)?;
+            .unwrap_or("1.0");
+        let probability = utils::get_prob_alap(probability, None)?;
         Ok(probability)
     }
 
