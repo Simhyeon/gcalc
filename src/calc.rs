@@ -126,6 +126,11 @@ impl Calculator {
         self.state.cost = cost;
     }
 
+    pub fn set_panic_on_invlaid_csv(&mut self, tv: bool) {
+        if tv { self.behaviour = CsvBehaviour::Panic }
+        else { self.behaviour = CsvBehaviour::Repeat }
+    }
+
     pub fn set_target_probability(&mut self, target_probability: f32) -> GcalcResult<()> {
         if target_probability > 1.0f32 || target_probability < 0.0f32 {
             return Err(GcalcError::InvalidArgument(format!("Given probability \"{}\" is should be bigger than 0.0 and smaller than 1.0", target_probability)));
