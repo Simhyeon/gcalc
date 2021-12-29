@@ -2,7 +2,7 @@ use std::path::Path;
 
 use csv::StringRecordsIntoIter;
 
-use crate::models::{Record, Qualficiation, ColumnMap, RefCsv, OutOption};
+use crate::models::{Record, Qualficiation, ColumnMap, RefCsv, OutOption, RecordCursor};
 use crate::{GcalcResult, GcalcError};
 use crate::formatter::{RecordFormatter, QualFormatter};
 use crate::utils;
@@ -163,11 +163,9 @@ impl Calculator {
         self.out_option= OutOption::File(path.to_owned());
         self
     }
-
     // </BUILDER>
     
-    // <Setter>
-    
+    // <SETTER>
     pub fn set_column_map(&mut self, column_map: ColumnMap) {
         self.column_map = column_map;
     }
@@ -212,8 +210,7 @@ impl Calculator {
     pub fn set_out_file(&mut self, path: &Path) {
         self.out_option = OutOption::File(path.to_owned());
     }
-
-    // </Setter>
+    // </SETTER>
 
     // <PROCESSING>
     pub fn print_range(&mut self, count: usize,start_index: Option<usize>) -> GcalcResult<()> {
@@ -241,7 +238,7 @@ impl Calculator {
         Ok(())
     }
 
-    /// Creat recors accroding to miscellaenous states
+    /// Creat records accroding to miscellaenous states
     fn create_records(&mut self, use_range:bool) -> GcalcResult<Vec<Record>> {
 
         // "!use_range" (negation of use range) means it is used as conditional loop
@@ -263,11 +260,16 @@ impl Calculator {
 
         let mut records : Vec<Record> = Vec::new();
         let mut total_cost = 0f32;
-        let mut index = 0;
+        let mut record_index = 0;
+        let mut csv_index = 0;
+        let mut cursor : RecordCursor;
 
         loop {
+            // Default cursor behaviour is next
+            cursor = RecordCursor::Next;
+
             // Only if csv value is not empty, update the state from csv value(file)
-            if csv_value != "" { self.update_state_from_csv_file(&mut csv_record, index)?; }
+            if !csv_value.is_empty() { self.update_state_from_csv_file(&mut csv_record, csv_index, &mut cursor)?; }
             self.calculate_fail_success()?;
 
             let prob_str = utils::get_prob_as_formatted(
@@ -275,7 +277,7 @@ impl Calculator {
                 &self.prob_type,
                 &self.prob_precision
             );
-            records.push(Record::new(index + 1,prob_str.to_owned(), total_cost));
+            records.push(Record::new(record_index + 1,prob_str.to_owned(), total_cost));
             total_cost = total_cost + self.state.cost;
             
             // If current probability is bigger than target_probability break
@@ -287,46 +289,62 @@ impl Calculator {
             if let Some(budget) = self.budget {
                 if total_cost > budget { break; }
             }
-            index = index + 1;
+
+            // If and only if cursor is next,
+            // increase csv index
+            if let RecordCursor::Next = cursor {
+                csv_index += 1;
+            }
+
+            // Increases record index 
+            // regardless of csv_index
+            record_index += 1;
 
             // When using range variant,
             // break when loop reached max count
-            if use_range && index >= self.count { break; }
+            if use_range && record_index >= self.count { break; }
         }
 
         Ok(records)
     }
-
     // </PROCESSING>
 
-
     // <INTERNAL>
-    fn update_state_from_csv_file(&mut self, csv_records :&mut StringRecordsIntoIter<&[u8]>, index: usize) -> GcalcResult<()> {
+    fn update_state_from_csv_file(&mut self, csv_records :&mut StringRecordsIntoIter<&[u8]>, index: usize, cursor: &mut RecordCursor) -> GcalcResult<()> {
         match csv_records.next() {
             Some(row) => {
                 // Temporary bound
                 let row = row?;
                 let row = row.iter().collect::<Vec<&str>>();
 
+                // Get Count,
+                // and check if count is same with current index( which is acutally "index + 1" )
+                if row.len() > self.column_map.count {
+                    if row[self.column_map.count].parse::<usize>().expect("Failed to get count as number") > index + 1 {
+                        *cursor = RecordCursor::Stay;
+                        // Do nothing & respect previous value,
+                        return Ok(());
+                    }
+                }
+
+                // Get probability
                 if row.len() > self.column_map.probability {
-                    self.state.probability = row[self.column_map.probability]
-                        .parse()
-                        .map_err(|_| GcalcError::ParseError(format!("Probability should be a float number, but the value in ({},{}) is not", index + 1, self.column_map.probability)))?;
+                    self.state.probability = utils::get_prob_alap(row[self.column_map.probability],None)?;
                 }
 
+                // Get added(bonus) probability
                 if row.len() > self.column_map.added {
-                    self.state.constant = row[self.column_map.added]
-                        .parse()
-                        .map_err(|_| GcalcError::ParseError(format!("Added probability should be a float number, but the value in ({},{}) is not", index + 1, self.column_map.added)))?;
+                    self.state.constant = utils::get_prob_alap(row[self.column_map.added], None)?;
                 }
 
+                // Get cost
                 if row.len() > self.column_map.cost {
                     self.state.cost = row[self.column_map.cost]
                         .parse()
                         .map_err(|_| GcalcError::ParseError(format!("Cost should be a float number, but the value in ({},{}) is not", index + 1, self.column_map.cost)))?;
                 }
-            }
-            None => { 
+            } // End some match
+            None => { // Record not found 
                 match self.behaviour {
                     CsvBehaviour::Repeat => (), // Do nothing & respect previous value,
                     CsvBehaviour::Panic => {
@@ -340,7 +358,6 @@ impl Calculator {
 
     /// calculate fail success
     fn calculate_fail_success(&mut self) -> GcalcResult<()> {
-        utils::prob_sanity_check(self.state.constant)?;
         // Current indenpendent success rate
         let success = (self.state.probability + self.state.constant).min(1.0f32);
         self.state.success_until = self.state.success_until + self.state.fail_until * success;
