@@ -16,7 +16,8 @@ diverse game gacha environments.
 # Target probabilty is 0.6
 gcalc cond 0.2 --budget 100 --cost 20 -f console -p 2 -T percentage -t 0.6
 ```
-which prints the table with the help of [tabled](https://crates.io/crates/tabled)
+which prints a table with the help from
+[tabled](https://crates.io/crates/tabled) crate.
 ```
 +-------+------------+------+
 | count | probabilty | cost |
