@@ -32,6 +32,7 @@ impl Cli {
                 .arg(Arg::new("column").about("Column mapping").short('l').long("column").takes_value(true))
                 .arg(Arg::new("noheader").about("CSV without header").long("noheader"))
                 .arg(Arg::new("out").about("Out file").short('o').long("out").takes_value(true))
+                .arg(Arg::new("fallable").about("Set csv value fallable"))
             )
             .subcommand(
                 App::new("qual")
@@ -48,6 +49,7 @@ impl Cli {
                 .arg(Arg::new("column").about("Column mapping").short('l').long("column").takes_value(true))
                 .arg(Arg::new("noheader").about("CSV without header").long("noheader"))
                 .arg(Arg::new("out").about("Out file").short('o').long("out").takes_value(true))
+                .arg(Arg::new("fallable").about("Set csv value fallable"))
             )
             .subcommand(
                 App::new("range")
@@ -65,6 +67,7 @@ impl Cli {
                 .arg(Arg::new("column").about("Column mapping").short('l').long("column").takes_value(true))
                 .arg(Arg::new("noheader").about("CSV without header").long("noheader"))
                 .arg(Arg::new("out").about("Out file").short('o').long("out").takes_value(true))
+                .arg(Arg::new("fallable").about("Set csv value fallable"))
             ) // "range" subcommand
             .subcommand(App::new("reference").about("Create reference file")) // "reference" file creation subcommand
             .get_matches()
@@ -189,6 +192,8 @@ impl Cli {
         if let Some(file) = args.value_of("out") {
             cal.set_out_file(std::path::Path::new(file));
         }
+
+        cal.set_csv_fallable(args.is_present("fallable"));
 
         Self::set_custom_column_order(cal, args)?;
 
