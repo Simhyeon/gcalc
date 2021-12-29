@@ -17,6 +17,7 @@ pub struct Calculator {
     csv_ref: RefCsv,
     csv_no_header: bool,
     column_map: ColumnMap,
+    fallable_csv: bool,
     prob_precision: Option<usize>,
     budget: Option<f32>,
     target_probability : Option<f32>,
@@ -25,65 +26,6 @@ pub struct Calculator {
     behaviour: CsvBehaviour,
     out_option: OutOption,
 }
-
-enum CsvBehaviour {
-    Repeat,
-    Panic,
-    // Possiblye early return
-}
-
-struct CalcState {
-    pub probability: f32,
-    pub constant: f32,
-    pub cost: f32,
-    pub success_until: f32,
-    pub fail_until: f32,
-}
-
-impl CalcState {
-    pub fn new(probability: f32) -> Self {
-        Self {
-            probability,
-            constant: 0.0,
-            cost: 0.0,
-            success_until: 0.0,
-            fail_until: 1.0,
-        }
-    }
-}
-
-pub enum TableFormat {
-    Console,
-    Csv,
-    GFM,
-}
-
-impl TableFormat {
-    pub fn from_str(string : &str) -> GcalcResult<Self> {
-        match string.to_lowercase().as_str() {
-            "console" => Ok(Self::Console),
-            "csv" => Ok(Self::Csv),
-            "gfm" | "github" => Ok(Self::GFM),
-            _ => Err(GcalcError::InvalidConversion(format!("{} is not a valid table format", string))),
-        }
-    }
-}
-
-pub enum ProbType {
-    Percentage,
-    Float,
-}
-
-impl ProbType {
-    pub fn from_str(string : &str) -> GcalcResult<Self> {
-        match string.to_lowercase().as_str() {
-            "percentage" => Ok(Self::Percentage),
-            "float" => Ok(Self::Float),
-            _ => Err(GcalcError::InvalidConversion(format!("{} is not a valid table format", string))),
-        }
-    }
-}
-
 impl Calculator {
     // <BUILDER>
     // Constructor methods
@@ -99,6 +41,7 @@ impl Calculator {
             csv_no_header: false,
             column_map: ColumnMap::new(COUNT_INDEX, BASIC_PROB_INDEX, ADDED_PROB_INDEX, COST_INDEX),
             format: TableFormat::Csv,
+            fallable_csv: false,
             prob_precision: None,
             target_probability: None,
             budget: None,
@@ -163,6 +106,11 @@ impl Calculator {
         self.out_option= OutOption::File(path.to_owned());
         self
     }
+
+    pub fn csv_fallable(mut self, tv: bool) -> Self {
+        self.fallable_csv= tv;
+        self
+    }
     // </BUILDER>
     
     // <SETTER>
@@ -209,6 +157,10 @@ impl Calculator {
 
     pub fn set_out_file(&mut self, path: &Path) {
         self.out_option = OutOption::File(path.to_owned());
+    }
+
+    pub fn set_csv_fallable(&mut self, tv: bool) {
+        self.fallable_csv= tv;
     }
     // </SETTER>
 
@@ -329,19 +281,28 @@ impl Calculator {
 
                 // Get probability
                 if row.len() > self.column_map.probability {
-                    self.state.probability = utils::get_prob_alap(row[self.column_map.probability],None)?;
+                    match utils::get_prob_alap(row[self.column_map.probability],None) {
+                        Ok(value) => self.state.probability = value,
+                        Err(err)  => if !self.fallable_csv { return Err(err); }
+                    }
                 }
 
                 // Get added(bonus) probability
                 if row.len() > self.column_map.added {
-                    self.state.constant = utils::get_prob_alap(row[self.column_map.added], None)?;
+                    match utils::get_prob_alap(row[self.column_map.added],None) {
+                        Ok(value) => self.state.constant = value,
+                        Err(err)  => if !self.fallable_csv { return Err(err); }
+                    }
                 }
 
                 // Get cost
                 if row.len() > self.column_map.cost {
-                    self.state.cost = row[self.column_map.cost]
-                        .parse()
-                        .map_err(|_| GcalcError::ParseError(format!("Cost should be a float number, but the value in ({},{}) is not", index + 1, self.column_map.cost)))?;
+                    match row[self.column_map.cost].parse::<f32>() {
+                        Ok(value) => self.state.cost = value,
+                        Err(_)  => if !self.fallable_csv { 
+                            return Err(GcalcError::ParseError(format!("Cost should be a number, but the value in ({},{}) is not", index + 1, self.column_map.cost)));
+                        }
+                    }
                 }
             } // End some match
             None => { // Record not found 
@@ -437,3 +398,62 @@ impl Calculator {
     }
     // </INTERNAL>
 }
+
+enum CsvBehaviour {
+    Repeat,
+    Panic,
+    // Possibly early return
+}
+
+struct CalcState {
+    pub probability: f32,
+    pub constant: f32,
+    pub cost: f32,
+    pub success_until: f32,
+    pub fail_until: f32,
+}
+
+impl CalcState {
+    pub fn new(probability: f32) -> Self {
+        Self {
+            probability,
+            constant: 0.0,
+            cost: 0.0,
+            success_until: 0.0,
+            fail_until: 1.0,
+        }
+    }
+}
+
+pub enum TableFormat {
+    Console,
+    Csv,
+    GFM,
+}
+
+impl TableFormat {
+    pub fn from_str(string : &str) -> GcalcResult<Self> {
+        match string.to_lowercase().as_str() {
+            "console" => Ok(Self::Console),
+            "csv" => Ok(Self::Csv),
+            "gfm" | "github" => Ok(Self::GFM),
+            _ => Err(GcalcError::InvalidConversion(format!("{} is not a valid table format", string))),
+        }
+    }
+}
+
+pub enum ProbType {
+    Percentage,
+    Float,
+}
+
+impl ProbType {
+    pub fn from_str(string : &str) -> GcalcResult<Self> {
+        match string.to_lowercase().as_str() {
+            "percentage" => Ok(Self::Percentage),
+            "float" => Ok(Self::Float),
+            _ => Err(GcalcError::InvalidConversion(format!("{} is not a valid table format", string))),
+        }
+    }
+}
+
