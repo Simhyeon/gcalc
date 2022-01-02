@@ -216,8 +216,7 @@ impl Calculator {
             .into_records();
 
         let mut records : Vec<Record> = Vec::new();
-        // This is because first try also consumes cost
-        let mut total_cost = self.state.cost;
+        let mut total_cost = 0f32;
         let mut record_index = 0;
         let mut csv_index = 0;
         let mut cursor : RecordCursor;
@@ -235,8 +234,10 @@ impl Calculator {
                 &self.prob_type,
                 &self.prob_precision
             );
-            records.push(Record::new(record_index + 1,prob_str.to_owned(), total_cost));
+            // Because first try also consumes cost
+            // total_cost should be calculated before push
             total_cost = total_cost + self.state.cost;
+            records.push(Record::new(record_index + 1,prob_str.to_owned(), total_cost));
             
             // If current probability is bigger than target_probability break
             if let Some(target) = self.target_probability {

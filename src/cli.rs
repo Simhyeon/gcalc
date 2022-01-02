@@ -153,7 +153,7 @@ impl Cli {
     // Utils, DRY codes
     fn get_sane_probability(args: &ArgMatches) -> GcalcResult<f32> {
         let probability = args.value_of("PROB")
-            .unwrap_or("1.0");
+            .unwrap_or_else(|| {eprintln!("Using 1.0 as default probability"); "1.0"});
         let probability = utils::get_prob_alap(probability, None)?;
         Ok(probability)
     }
