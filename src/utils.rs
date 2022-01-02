@@ -17,7 +17,7 @@ pub fn get_prob_alap(number_str: &str, suffix: Option<&str>) -> GcalcResult<f32>
         }
     }
 
-    let number = number.parse::<f32>().expect("Failed to parse number as f32");
+    let number = number.parse::<f32>()?;
 
     if number > 0.0f32 { 
         // CASE : 0.0 <= num <= 1.0

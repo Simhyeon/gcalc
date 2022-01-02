@@ -1,4 +1,5 @@
 use std::string::FromUtf8Error;
+use std::num::ParseFloatError;
 
 use thiserror::Error;
 
@@ -43,5 +44,12 @@ impl From<csv::Error> for GcalcError {
 impl From<FromUtf8Error> for GcalcError {
     fn from(err : FromUtf8Error) -> Self {
         Self::InvalidStringConversion(err)
+    }
+}
+
+
+impl From<ParseFloatError> for GcalcError {
+    fn from(err : ParseFloatError) -> Self {
+        Self::ParseError(err.to_string())
     }
 }

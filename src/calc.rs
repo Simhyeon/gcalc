@@ -309,6 +309,7 @@ impl Calculator {
                             return Err(GcalcError::ParseError(format!("Cost should be a number, but the value in ({},{}) is not", index + 1, self.column_map.cost)));
                         }
                     }
+
                 }
             } // End some match
             None => { // Record not found 
