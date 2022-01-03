@@ -23,7 +23,7 @@ pub struct Calculator {
     target_probability : Option<f32>,
     prob_type: ProbType,
     // Which behaviour to take when csv rows ends
-    behaviour: CsvRecordBehaviour,
+    record_behaviour: CsvRecordBehaviour,
     out_option: OutOption,
 }
 impl Calculator {
@@ -42,7 +42,7 @@ impl Calculator {
             target_probability: None,
             budget: None,
             prob_type: ProbType::Float,
-            behaviour : CsvRecordBehaviour::Repeat,
+            record_behaviour : CsvRecordBehaviour::Repeat,
             out_option: OutOption::Console,
         })
     }
@@ -58,8 +58,8 @@ impl Calculator {
     }
 
     pub fn strict_csv(mut self, tv: bool) -> Self {
-        if tv { self.behaviour = CsvRecordBehaviour::Panic }
-        else { self.behaviour = CsvRecordBehaviour::Repeat }
+        if tv { self.record_behaviour = CsvRecordBehaviour::Panic }
+        else { self.record_behaviour = CsvRecordBehaviour::Repeat }
         self
     }
 
@@ -153,8 +153,8 @@ impl Calculator {
     }
 
     pub fn set_strict_csv(&mut self, tv: bool) {
-        if tv { self.behaviour = CsvRecordBehaviour::Panic }
-        else { self.behaviour = CsvRecordBehaviour::Repeat }
+        if tv { self.record_behaviour = CsvRecordBehaviour::Panic }
+        else { self.record_behaviour = CsvRecordBehaviour::Repeat }
     }
 
     pub fn set_target_probability(&mut self, target_probability: f32) -> GcalcResult<()> {
@@ -412,10 +412,10 @@ impl Calculator {
                 }
             } // End some match
             None => { // Record not found 
-                match self.behaviour {
+                match self.record_behaviour {
                     CsvRecordBehaviour::Repeat => (), // Do nothing & respect previous value,
                     CsvRecordBehaviour::Panic => {
-                        return Err(GcalcError::CsvError(format!("Empty row in index: {}", index))); 
+                        return Err(GcalcError::CsvError(format!("Empty row in index: {}", index + 1))); 
                     }
                 }
             }
@@ -568,7 +568,7 @@ pub enum ProbType {
 impl ProbType {
     pub fn from_str(string : &str) -> GcalcResult<Self> {
         match string.to_lowercase().as_str() {
-            "percentage" => Ok(Self::Percentage),
+            "percentage" | "percent" => Ok(Self::Percentage),
             "float" => Ok(Self::Float),
             _ => Err(GcalcError::InvalidConversion(format!("{} is not a valid table format", string))),
         }
