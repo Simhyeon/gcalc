@@ -8,6 +8,6 @@ mod models;
 mod utils;
 mod consts;
 
-pub use calc::{Calculator, ProbType, TableFormat};
+pub use calc::{Calculator, TableFormat};
 pub use error::GcalcError;
-pub use models::GcalcResult;
+pub use models::{GcalcResult, ProbType};
