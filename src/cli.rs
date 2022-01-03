@@ -14,9 +14,9 @@ impl Cli {
 
     fn args_builder() -> ArgMatches {
 
-        let cond_app  = Self::common_app_args(App::new("cond").about(""));
-        let range_app = Self::common_app_args(App::new("range").about(""));
-        let qual_app  = Self::common_app_args(App::new("qual").about(""));
+        let cond_app  = Self::common_app_args(App::new("cond").about("Conditional calculation"));
+        let range_app = Self::common_app_args(App::new("range").about("Prints range of calculations"));
+        let qual_app  = Self::common_app_args(App::new("qual").about("Conditional calculation but only prints result"));
 
         let main_app = App::new("gcalc")
             .version("0.2.0")
@@ -47,11 +47,11 @@ impl Cli {
             .arg(Arg::new("refin").help("Reference from stdin").long("refin").conflicts_with("reference"))
             .arg(Arg::new("format").help("Table format(csv|console|gfm)").short('f').long("format").takes_value(true))
             .arg(Arg::new("precision").help("Precision").short('P').long("precision").takes_value(true))
-            .arg(Arg::new("probtype").help("Probability type").short('T').long("type").takes_value(true))
+            .arg(Arg::new("probtype").help("Probability type(percentage|fraction)").short('T').long("type").takes_value(true))
             .arg(Arg::new("column").help("Column mapping").short('l').long("column").takes_value(true))
             .arg(Arg::new("noheader").help("CSV without header").long("noheader"))
             .arg(Arg::new("out").help("Out file").short('o').long("out").takes_value(true))
-            .arg(Arg::new("fallback").help("Set csv value fallback {rollback|ignore|none}").long("fallback").default_value("none"))
+            .arg(Arg::new("fallback").help("Set csv value fallback (rollback|ignore|none)").long("fallback").default_value("none"))
             .arg(Arg::new("strict").help("Set strict CSV reader mode").short('s').long("strict"));
 
         #[cfg(feature = "option")]
