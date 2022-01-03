@@ -42,7 +42,7 @@ pub fn get_prob_alap(number_str: &str, suffix: Option<&str>) -> GcalcResult<f32>
 
 pub fn get_number_as_fraction(number: f32) -> GcalcResult<f32> {
     let prob: f32;
-    if number > 0.0f32 { 
+    if number >= 0.0f32 { 
         // CASE : 0.0 <= num <= 1.0
         if number <= 1.0f32 { 
             prob = number;
@@ -79,11 +79,14 @@ pub fn get_prob_as_formatted(mut num: f32, prob_type: &ProbType, precision: &Opt
 
 /// Convert floating number to string 
 ///
-/// This gets optional precision as formatting modifier
+/// This doesn't simply use a single format macro 
+/// because format macro varies according to exponents of given number.
 pub fn float_to_string(num: f32, precision: &Option<usize>) -> String {
     if let Some(precision) = precision {
-        format!("{:.1$}",num,precision)
+        let decimal_precision = 10.0f32.powi(*precision as i32);
+        let converted = f32::trunc(num  * decimal_precision ) / decimal_precision ;
+        format!("{:.1$}",converted,precision)
     } else {
-        format!("{}",num)
+        num.to_string()
     }
 }
