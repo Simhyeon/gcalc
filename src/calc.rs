@@ -2,7 +2,7 @@ use std::path::Path;
 
 use csv::StringRecordsIntoIter;
 
-use crate::models::{Record, Qualficiation, ColumnMap, RefCsv, OutOption, RecordCursor};
+use crate::models::{Record, Qualficiation, ColumnMap, CsvRef, OutOption, RecordCursor};
 use crate::{GcalcResult, GcalcError};
 use crate::formatter::{RecordFormatter, QualFormatter};
 use crate::utils;
@@ -14,7 +14,7 @@ pub struct Calculator {
     state: CalcState,
     count: usize,
     format: TableFormat,
-    csv_ref: RefCsv,
+    csv_ref: CsvRef,
     csv_no_header: bool,
     column_map: ColumnMap,
     fallable_csv: bool,
@@ -37,7 +37,7 @@ impl Calculator {
         Ok(Self {
             state : CalcState::new(start_probability),
             count : 0,
-            csv_ref : RefCsv::None,
+            csv_ref : CsvRef::None,
             csv_no_header: false,
             column_map: ColumnMap::new(COUNT_INDEX, BASIC_PROB_INDEX, ADDED_PROB_INDEX, COST_INDEX),
             format: TableFormat::Csv,
@@ -92,7 +92,7 @@ impl Calculator {
         self
     }
 
-    pub fn csv_ref(mut self, csv_reference: RefCsv) -> Self {
+    pub fn csv_ref(mut self, csv_reference: CsvRef) -> Self {
         self.csv_ref = csv_reference;
         self
     }
@@ -156,7 +156,7 @@ impl Calculator {
         self.prob_precision.replace(precision);
     }
 
-    pub fn set_csv_file(&mut self, csv_reference: RefCsv) {
+    pub fn set_csv_file(&mut self, csv_reference: CsvRef) {
         self.csv_ref = csv_reference;
     }
 
@@ -185,12 +185,54 @@ impl Calculator {
     }
 
     pub fn print_qualfication(&mut self) -> GcalcResult<()> {
-        let records = self.create_records(false)?;
+        self.conditional_sanity_check()?;
+        let total_count: usize;
+        let total_cost: f32;
+        let final_probability: String;
 
-        let total_count = records.len();
-        let total_cost = records.last().unwrap_or(&Record::new(0,"".to_string(), 0.0)).cost;
+        // Simply calculate geometric series
+        if let CsvRef::None = self.csv_ref {
+            // Probability and possibly with budget
+            if let Some(target) = self.target_probability {
+                let count = utils::geometric_series_qual(self.state.probability, target);
+                let count = if let Some(bud) = self.budget  {
+                    if count as f32 * self.state.cost > bud {
+                        (bud / self.state.cost).floor() as usize
+                    } else { count }
+                } else { count };
+                total_count = count;
+                total_cost = count as f32 * self.state.cost; 
+                final_probability = utils::get_prob_as_formatted(
+                    utils::geometric_series(total_count, self.state.probability), 
+                    &self.prob_type, 
+                    &self.prob_precision
+                );
+            } else { // No probability only budget
+                if self.state.cost == 0f32 {
+                    return Err(GcalcError::InvalidArgument(format!("Cost should not be 0 if no reference was given as argument.")));
+                }
+                let count = (self.budget.unwrap() / self.state.cost).floor() as usize;
 
-        self.print_qual_table(total_count, total_cost)?;
+                total_count = count;
+                total_cost = count as f32 * self.state.cost;
+                final_probability = utils::get_prob_as_formatted(
+                    utils::geometric_series(total_count, self.state.probability), 
+                    &self.prob_type, 
+                    &self.prob_precision
+                );
+            }
+        } else {
+            let records = self.create_records(false)?;
+
+            total_count = records.len();
+
+            // It is a single record table so it is safe to index 0th element
+            let last_record = &records[0];
+            total_cost = last_record.cost;
+            final_probability = last_record.probability.clone();
+        }
+
+        self.print_qual_table(total_count, total_cost, &final_probability)?;
 
         Ok(())
     }
@@ -204,9 +246,9 @@ impl Calculator {
 
         // Uniform format of csv value as string
         let csv_value = match &self.csv_ref {
-            RefCsv::File(file) => std::fs::read_to_string(file)?,
-            RefCsv::Raw(string) => string.clone(),
-            RefCsv::None => "".to_owned()
+            CsvRef::File(file) => std::fs::read_to_string(file)?,
+            CsvRef::Raw(string) => string.clone(),
+            CsvRef::None => "".to_owned()
         };
 
         // Total csv records iterator
@@ -342,7 +384,7 @@ impl Calculator {
             return Err(GcalcError::InvalidConditional(format!("Either target probability or budget should be present")));
         }
 
-        if self.csv_ref == RefCsv::None { // No ref file
+        if self.csv_ref == CsvRef::None { // No ref file
             if self.budget != None && self.state.cost == 0.0 {
                 return Err(GcalcError::InvalidConditional(format!("0 cost with budget will incur infinite loop")));
             }
@@ -382,16 +424,16 @@ impl Calculator {
         Ok(())
     }
 
-    fn print_qual_table(&self, count: usize, cost: f32) -> GcalcResult<()> {
+    fn print_qual_table(&self, count: usize, cost: f32, probability: &str) -> GcalcResult<()> {
         let formatted = match self.format {
             TableFormat::Csv => {
-                QualFormatter::to_csv_table(Qualficiation::new(count, cost))?
+                QualFormatter::to_csv_table(Qualficiation::new(count, cost, probability))?
             }
             TableFormat::Console => {
-                QualFormatter::to_styled_table(Qualficiation::new(count, cost), tabled::Style::default())
+                QualFormatter::to_styled_table(Qualficiation::new(count, cost, probability), tabled::Style::default())
             }
             TableFormat::GFM => {
-                QualFormatter::to_styled_table(Qualficiation::new(count, cost), tabled::Style::github_markdown())
+                QualFormatter::to_styled_table(Qualficiation::new(count, cost, probability), tabled::Style::github_markdown())
             }
         };
         self.yield_table(&formatted)?;
