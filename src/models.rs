@@ -109,14 +109,14 @@ pub enum RecordCursor {
 #[cfg_attr(feature= "option" ,derive(Serialize, Deserialize,Clone,Copy))]
 pub enum ProbType {
     Percentage,
-    Float,
+    Fraction,
 }
 
 impl ProbType {
     pub fn from_str(string : &str) -> GcalcResult<Self> {
         match string.to_lowercase().as_str() {
             "percentage" | "percent" => Ok(Self::Percentage),
-            "float" => Ok(Self::Float),
+            "float" => Ok(Self::Fraction),
             _ => Err(GcalcError::InvalidConversion(format!("{} is not a valid table format", string))),
         }
     }
