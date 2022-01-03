@@ -1,4 +1,4 @@
-use crate::{GcalcResult, Calculator, utils, TableFormat, ProbType, models::{RefCsv, ColumnMap}, GcalcError};
+use crate::{GcalcResult, Calculator, utils, TableFormat, ProbType, models::{CsvRef, ColumnMap}, GcalcError};
 use clap::{ArgMatches,App, Arg};
 use std::{path::PathBuf, io::Read};
 use crate::consts::*;
@@ -20,53 +20,53 @@ impl Cli {
             .subcommand(
                 App::new("cond")
                 .about("Conditional calculation")
-                .arg(Arg::new("PROB").about("Basic probability").takes_value(true))
-                .arg(Arg::new("reference").about("Reference file").short('r').long("ref").takes_value(true).conflicts_with("refin"))
-                .arg(Arg::new("refin").about("Reference from stdin").long("refin").conflicts_with("reference"))
-                .arg(Arg::new("budget").about("Budget of total cost").short('b').long("budget").takes_value(true))
-                .arg(Arg::new("target").about("Target probability").short('t').long("target").takes_value(true))
-                .arg(Arg::new("format").about("Table format(csv|console|gfm)").short('f').long("format").takes_value(true))
-                .arg(Arg::new("precision").about("Precision").short('p').long("precision").takes_value(true))
-                .arg(Arg::new("probtype").about("Probability type").short('T').long("type").takes_value(true))
-                .arg(Arg::new("cost").about("Cost per try").short('C').long("cost").takes_value(true))
-                .arg(Arg::new("column").about("Column mapping").short('l').long("column").takes_value(true))
-                .arg(Arg::new("noheader").about("CSV without header").long("noheader"))
-                .arg(Arg::new("out").about("Out file").short('o').long("out").takes_value(true))
-                .arg(Arg::new("fallable").about("Set csv value fallable").long("fallable"))
+                .arg(Arg::new("PROB").help("Basic probability").takes_value(true))
+                .arg(Arg::new("reference").help("Reference file").short('r').long("ref").takes_value(true).conflicts_with("refin"))
+                .arg(Arg::new("refin").help("Reference from stdin").long("refin").conflicts_with("reference"))
+                .arg(Arg::new("budget").help("Budget of total cost").short('b').long("budget").takes_value(true))
+                .arg(Arg::new("target").help("Target probability").short('t').long("target").takes_value(true))
+                .arg(Arg::new("format").help("Table format(csv|console|gfm)").short('f').long("format").takes_value(true))
+                .arg(Arg::new("precision").help("Precision").short('p').long("precision").takes_value(true))
+                .arg(Arg::new("probtype").help("Probability type").short('T').long("type").takes_value(true))
+                .arg(Arg::new("cost").help("Cost per try").short('C').long("cost").takes_value(true))
+                .arg(Arg::new("column").help("Column mapping").short('l').long("column").takes_value(true))
+                .arg(Arg::new("noheader").help("CSV without header").long("noheader"))
+                .arg(Arg::new("out").help("Out file").short('o').long("out").takes_value(true))
+                .arg(Arg::new("fallable").help("Set csv value fallable").long("fallable"))
             )
             .subcommand(
                 App::new("qual")
                 .about("Conditional calculation but only prints result")
-                .arg(Arg::new("PROB").about("Basic probability").takes_value(true))
-                .arg(Arg::new("reference").about("Reference file").short('r').long("ref").takes_value(true).conflicts_with("refin"))
-                .arg(Arg::new("refin").about("Reference from stdin").long("refin").conflicts_with("reference"))
-                .arg(Arg::new("budget").about("Budget of total cost").short('b').long("budget").takes_value(true))
-                .arg(Arg::new("target").about("Target probability").short('t').long("target").takes_value(true))
-                .arg(Arg::new("format").about("Table format(csv|console|gfm)").short('f').long("format").takes_value(true))
-                .arg(Arg::new("precision").about("Precision").short('p').long("precision").takes_value(true))
-                .arg(Arg::new("probtype").about("Probability type").short('T').long("type").takes_value(true))
-                .arg(Arg::new("cost").about("Cost per try").short('C').long("cost").takes_value(true))
-                .arg(Arg::new("column").about("Column mapping").short('l').long("column").takes_value(true))
-                .arg(Arg::new("noheader").about("CSV without header").long("noheader"))
-                .arg(Arg::new("out").about("Out file").short('o').long("out").takes_value(true))
-                .arg(Arg::new("fallable").about("Set csv value fallable").long("fallable"))
+                .arg(Arg::new("PROB").help("Basic probability").takes_value(true))
+                .arg(Arg::new("reference").help("Reference file").short('r').long("ref").takes_value(true).conflicts_with("refin"))
+                .arg(Arg::new("refin").help("Reference from stdin").long("refin").conflicts_with("reference"))
+                .arg(Arg::new("budget").help("Budget of total cost").short('b').long("budget").takes_value(true))
+                .arg(Arg::new("target").help("Target probability").short('t').long("target").takes_value(true))
+                .arg(Arg::new("format").help("Table format(csv|console|gfm)").short('f').long("format").takes_value(true))
+                .arg(Arg::new("precision").help("Precision").short('p').long("precision").takes_value(true))
+                .arg(Arg::new("probtype").help("Probability type").short('T').long("type").takes_value(true))
+                .arg(Arg::new("cost").help("Cost per try").short('C').long("cost").takes_value(true))
+                .arg(Arg::new("column").help("Column mapping").short('l').long("column").takes_value(true))
+                .arg(Arg::new("noheader").help("CSV without header").long("noheader"))
+                .arg(Arg::new("out").help("Out file").short('o').long("out").takes_value(true))
+                .arg(Arg::new("fallable").help("Set csv value fallable").long("fallable"))
             )
             .subcommand(
                 App::new("range")
                 .about("Prints range of calculations")
-                .arg(Arg::new("PROB").about("Basic probability").takes_value(true))
-                .arg(Arg::new("reference").about("Reference file").short('r').long("ref").takes_value(true).conflicts_with("refin"))
-                .arg(Arg::new("refin").about("Reference from stdin").long("refin").conflicts_with("reference"))
-                .arg(Arg::new("count").required(true).about("Counts to execute").short('c').long("count").takes_value(true))
-                .arg(Arg::new("start").about("Starting index to print").short('s').long("start").takes_value(true))
-                .arg(Arg::new("format").about("Table format(csv|console|gfm)").short('f').long("format").takes_value(true))
-                .arg(Arg::new("precision").about("Precision").short('p').long("precision").takes_value(true))
-                .arg(Arg::new("probtype").about("Probability type").short('T').long("type").takes_value(true))
-                .arg(Arg::new("cost").about("Cost per try").short('C').long("cost").takes_value(true))
-                .arg(Arg::new("column").about("Column mapping").short('l').long("column").takes_value(true))
-                .arg(Arg::new("noheader").about("CSV without header").long("noheader"))
-                .arg(Arg::new("out").about("Out file").short('o').long("out").takes_value(true))
-                .arg(Arg::new("fallable").about("Set csv value fallable").long("fallable"))
+                .arg(Arg::new("PROB").help("Basic probability").takes_value(true))
+                .arg(Arg::new("reference").help("Reference file").short('r').long("ref").takes_value(true).conflicts_with("refin"))
+                .arg(Arg::new("refin").help("Reference from stdin").long("refin").conflicts_with("reference"))
+                .arg(Arg::new("count").required(true).help("Counts to execute").short('c').long("count").takes_value(true))
+                .arg(Arg::new("start").help("Starting index to print").short('s').long("start").takes_value(true))
+                .arg(Arg::new("format").help("Table format(csv|console|gfm)").short('f').long("format").takes_value(true))
+                .arg(Arg::new("precision").help("Precision").short('p').long("precision").takes_value(true))
+                .arg(Arg::new("probtype").help("Probability type").short('T').long("type").takes_value(true))
+                .arg(Arg::new("cost").help("Cost per try").short('C').long("cost").takes_value(true))
+                .arg(Arg::new("column").help("Column mapping").short('l').long("column").takes_value(true))
+                .arg(Arg::new("noheader").help("CSV without header").long("noheader"))
+                .arg(Arg::new("out").help("Out file").short('o').long("out").takes_value(true))
+                .arg(Arg::new("fallable").help("Set csv value fallable").long("fallable"))
             ) // "range" subcommand
             .subcommand(App::new("reference").about("Create reference file")) // "reference" file creation subcommand
             .get_matches()
@@ -166,12 +166,12 @@ impl Cli {
 
         // Reference and refin is mutual exclusive
         if let Some(csv_file) = args.value_of("reference") {
-            cal.set_csv_file(RefCsv::File(PathBuf::from(csv_file)));
+            cal.set_csv_file(CsvRef::File(PathBuf::from(csv_file)));
         } else if args.is_present("refin") {
             let stdin = std::io::stdin();
             let mut string = String::new();
             stdin.lock().read_to_string(&mut string)?;
-            cal.set_csv_file(RefCsv::Raw(string));
+            cal.set_csv_file(CsvRef::Raw(string));
         }
 
         if let Some(format) = args.value_of("format") {
