@@ -33,7 +33,7 @@ impl CalculatorOption {
     pub fn new() -> Self {
         Self {
             count: 0,
-            prob_type: ProbType::Float,
+            prob_type: ProbType::Fraction,
             prob_precision : None,
             budget: None,
             fallback: CSVInvalidBehaviour::None,
@@ -91,7 +91,7 @@ impl Calculator {
             prob_precision: None,
             target_probability: None,
             budget: None,
-            prob_type: ProbType::Float,
+            prob_type: ProbType::Fraction,
             record_behaviour : CsvRecordBehaviour::Repeat,
             out_option: OutOption::Console,
         })
