@@ -1,13 +1,33 @@
 # Gcalc
 
-Gcalc is a game probability (mostly gachas) calculator.
+Gcalc is a game probability calculator.
+
+Gcalc is not merely a gacha simulator but more of a generic probabilty
+calculator.
+
+## About
 
 ### Why not use a simple formula?
 
-Well because, real life examples are not clear cut demonstrated geometric
+Well because, real life usages are not clear cut demonstrated geometric
 sequences. Sometimes there is bonus for a specific gacha stage and there is
-also so-called confirmed gacha system. Therefore single formula cannot fit into
-diverse game gacha environments.
+also a so-called confirmed gacha system, which makes it hard to use geometric
+series formula. 
+
+### Ok, why not use other gacha simulators or calculators?
+
+First, simulation is not calculation. The major reasoning of this crate is
+about expectation and calibration, especially game development in mind.
+
+Second, existing calculators only consider fixed value of probabilty. However
+there are plenty of contents that utilize bonus probabilty on specific steps
+and there are some gachas that have different probabilty for different
+situations.
+
+Third, those are hard to integrate with other systems. Most of them are either
+simple programs with integrated front end (GUI) which can be only losely
+connected to other game development tools at the most and automation is
+nearly impossible.
 
 ## Demo
 
