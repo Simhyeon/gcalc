@@ -22,7 +22,7 @@ path = "src/lib.rs"
 binary = ["clap"]
 
 [dependencies]
-clap = { version = "3.0.0-beta.2", default-features = false, features = ["std"], optional=true}
+clap = { version = "3.0.0", default-features = false, features = ["std"], optional=true}
 csv = "1.1.6"
 thiserror = "1.0.25"
 serde = { version = "1.0.126", features = ["derive"]}
