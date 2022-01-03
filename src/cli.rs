@@ -1,4 +1,4 @@
-use crate::{GcalcResult, Calculator, utils, TableFormat, ProbType, models::{CsvRef, ColumnMap}, GcalcError};
+use crate::{GcalcResult, Calculator, utils, TableFormat, ProbType, models::{CsvRef, ColumnMap}, GcalcError, calc::CalculatorOption};
 use clap::{ArgMatches,App, Arg};
 use std::{path::PathBuf, io::Read};
 use crate::consts::*;
@@ -13,69 +13,51 @@ impl Cli {
     }
 
     fn args_builder() -> ArgMatches {
-        App::new("gcalc")
+
+        let cond_app  = Self::common_app_args(App::new("cond").about(""));
+        let range_app = Self::common_app_args(App::new("range").about(""));
+        let qual_app  = Self::common_app_args(App::new("qual").about(""));
+
+        let main_app = App::new("gcalc")
             .version("0.2.0")
             .author("Simon creek <simoncreek@tutanota.com>")
             .about("Gcalc is a gacha simulator for game development and other decision makings.") // meta information end
-            .subcommand(
-                App::new("cond")
-                .about("Conditional calculation")
-                .arg(Arg::new("prob").help("Basic probability").short('p').long("probability").takes_value(true))
-                .arg(Arg::new("cost").help("Cost per try").short('C').long("cost").takes_value(true))
-                .arg(Arg::new("constant").help("Constant value to be added into probability").long("constant").takes_value(true))
-                .arg(Arg::new("reference").help("Reference file").short('r').long("ref").takes_value(true).conflicts_with("refin"))
-                .arg(Arg::new("refin").help("Reference from stdin").long("refin").conflicts_with("reference"))
+            .subcommand(cond_app
                 .arg(Arg::new("budget").help("Budget of total cost").short('b').long("budget").takes_value(true))
                 .arg(Arg::new("target").help("Target probability").short('t').long("target").takes_value(true))
-                .arg(Arg::new("format").help("Table format(csv|console|gfm)").short('f').long("format").takes_value(true))
-                .arg(Arg::new("precision").help("Precision").short('P').long("precision").takes_value(true))
-                .arg(Arg::new("probtype").help("Probability type").short('T').long("type").takes_value(true))
-                .arg(Arg::new("column").help("Column mapping").short('l').long("column").takes_value(true))
-                .arg(Arg::new("noheader").help("CSV without header").long("noheader"))
-                .arg(Arg::new("out").help("Out file").short('o').long("out").takes_value(true))
-                .arg(Arg::new("fallback").help("Set csv value fallback {rollback|ignore|none}").long("fallback").default_value("none"))
-                .arg(Arg::new("strict").help("Set strict CSV reader mode").short('s').long("strict"))
-            )
-            .subcommand(
-                App::new("qual")
-                .about("Conditional calculation but only prints result")
-                .arg(Arg::new("prob").help("Basic probability").short('p').long("probability").takes_value(true))
-                .arg(Arg::new("cost").help("Cost per try").short('C').long("cost").takes_value(true))
-                .arg(Arg::new("constant").help("Constant value to be added into probability").long("constant").takes_value(true))
-                .arg(Arg::new("reference").help("Reference file").short('r').long("ref").takes_value(true).conflicts_with("refin"))
-                .arg(Arg::new("refin").help("Reference from stdin").long("refin").conflicts_with("reference"))
+            ).subcommand(qual_app
                 .arg(Arg::new("budget").help("Budget of total cost").short('b').long("budget").takes_value(true))
                 .arg(Arg::new("target").help("Target probability").short('t').long("target").takes_value(true))
-                .arg(Arg::new("format").help("Table format(csv|console|gfm)").short('f').long("format").takes_value(true))
-                .arg(Arg::new("precision").help("Precision").short('P').long("precision").takes_value(true))
-                .arg(Arg::new("probtype").help("Probability type").short('T').long("type").takes_value(true))
-                .arg(Arg::new("column").help("Column mapping").short('l').long("column").takes_value(true))
-                .arg(Arg::new("noheader").help("CSV without header").long("noheader"))
-                .arg(Arg::new("out").help("Out file").short('o').long("out").takes_value(true))
-                .arg(Arg::new("fallback").help("Set csv value fallback {rollback|ignore|none}").long("fallback").default_value("none"))
-                .arg(Arg::new("strict").help("Set strict CSV reader mode").short('s').long("strict"))
-            )
-            .subcommand(
-                App::new("range")
-                .about("Prints range of calculations")
-                .arg(Arg::new("prob").help("Basic probability").short('p').long("probability").takes_value(true))
-                .arg(Arg::new("cost").help("Cost per try").short('C').long("cost").takes_value(true))
-                .arg(Arg::new("constant").help("Constant value to be added into probability").long("constant").takes_value(true))
-                .arg(Arg::new("reference").help("Reference file").short('r').long("ref").takes_value(true).conflicts_with("refin"))
-                .arg(Arg::new("refin").help("Reference from stdin").long("refin").conflicts_with("reference"))
-                .arg(Arg::new("count").required(true).help("Counts to execute").short('c').long("count").takes_value(true))
+            ).subcommand(range_app 
+                .arg(Arg::new("count").help("Counts to execute").short('c').long("count").takes_value(true))
                 .arg(Arg::new("start").help("Starting index to print").short('S').long("start").takes_value(true))
-                .arg(Arg::new("format").help("Table format(csv|console|gfm)").short('f').long("format").takes_value(true))
-                .arg(Arg::new("precision").help("Precision").short('P').long("precision").takes_value(true))
-                .arg(Arg::new("probtype").help("Probability type").short('T').long("type").takes_value(true))
-                .arg(Arg::new("column").help("Column mapping").short('l').long("column").takes_value(true))
-                .arg(Arg::new("noheader").help("CSV without header").long("noheader"))
-                .arg(Arg::new("out").help("Out file").short('o').long("out").takes_value(true))
-                .arg(Arg::new("fallback").help("Set csv value fallback").long("fallback").default_value("none"))
-                .arg(Arg::new("strict").help("Set strict CSV reader mode").short('s').long("strict"))
-            ) // "range" subcommand
-            .subcommand(App::new("reference").about("Create reference file")) // "reference" file creation subcommand
-            .get_matches()
+            ).subcommand(App::new("reference").about("Create a reference file"));
+
+            #[cfg(feature = "option")]
+            let app = main_app.subcommand(App::new("option").about("Create an option file")); // "option" file creation subcommand
+
+            app.get_matches()
+    }
+
+    fn common_app_args(app : clap::App) -> clap::App {
+        let app = app.arg(Arg::new("prob").help("Basic probability").short('p').long("probability").takes_value(true))
+            .arg(Arg::new("cost").help("Cost per try").short('C').long("cost").takes_value(true))
+            .arg(Arg::new("constant").help("Constant value to be added into probability").long("constant").takes_value(true))
+            .arg(Arg::new("reference").help("Reference file").short('r').long("ref").takes_value(true).conflicts_with("refin"))
+            .arg(Arg::new("refin").help("Reference from stdin").long("refin").conflicts_with("reference"))
+            .arg(Arg::new("format").help("Table format(csv|console|gfm)").short('f').long("format").takes_value(true))
+            .arg(Arg::new("precision").help("Precision").short('P').long("precision").takes_value(true))
+            .arg(Arg::new("probtype").help("Probability type").short('T').long("type").takes_value(true))
+            .arg(Arg::new("column").help("Column mapping").short('l').long("column").takes_value(true))
+            .arg(Arg::new("noheader").help("CSV without header").long("noheader"))
+            .arg(Arg::new("out").help("Out file").short('o').long("out").takes_value(true))
+            .arg(Arg::new("fallback").help("Set csv value fallback {rollback|ignore|none}").long("fallback").default_value("none"))
+            .arg(Arg::new("strict").help("Set strict CSV reader mode").short('s').long("strict"));
+
+        #[cfg(feature = "option")]
+        let app = app.arg(Arg::new("option").help("Option file to use").short('O').long("option").takes_value(true));
+
+        app
     }
 
     fn run_calculator(args: &ArgMatches) -> GcalcResult<()> {
@@ -92,6 +74,10 @@ impl Cli {
             Some(( "reference" , _)) => {
                 Self::subcommand_reference()?;
             }
+            #[cfg(feature = "option")]
+            Some(( "option" , _)) => {
+                Self::subcommand_option()?;
+            }
             _ => eprintln!("No proper sub command was given to the program"),
         }
 
@@ -99,10 +85,10 @@ impl Cli {
     }
 
     fn subcommand_range(args: &ArgMatches) -> GcalcResult<()> {
-        let count = args.value_of("count")
-            .unwrap()
-            .parse()
-            .map_err( |_| GcalcError::ParseError("Count should be a positive integer".to_owned()))?;
+        // Override count if value was given
+        let count = if let Some(count) = args.value_of("count") {
+            Some(count.parse::<usize>().map_err( |_| GcalcError::ParseError("Count should be a positive integer".to_owned()))?)
+        } else { None };
 
         let mut cal = Calculator::new()?;
         let mut min = 0;
@@ -162,6 +148,12 @@ impl Cli {
     }
 
     fn set_calculator_attribute(cal : &mut Calculator, args: &ArgMatches) -> GcalcResult<()> {
+        #[cfg(feature = "option")]
+        if let Some(file) = args.value_of("option") {
+            let option =  CalculatorOption::from_file(std::path::Path::new(file))?;
+            cal.set_option(&option);
+        }
+
         let prob = Self::get_prob_as_fraction_from_args(args)?;
         cal.set_probability(prob, true)?;
 
@@ -240,6 +232,14 @@ impl Cli {
 
     fn subcommand_reference() -> GcalcResult<()> {
         std::fs::write(std::path::Path::new("ref.csv"), r#"count,probability,constant,cost"#)?;
+        Ok(())
+    }
+
+    #[cfg(feature = "option")]
+    fn subcommand_option() -> GcalcResult<()> {
+        let path = std::path::Path::new("option.json");
+        println!("Created new option file \"{}\"", path.display());
+        std::fs::write(path, CalculatorOption::new().to_json()?)?;
         Ok(())
     }
 }
