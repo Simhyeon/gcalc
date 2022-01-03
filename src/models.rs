@@ -22,8 +22,8 @@ impl ColumnMap {
 #[derive(Serialize, Tabled)]
 pub(crate) struct Qualficiation {
     pub count: usize,
-    pub cost : f32,
     pub probability: String,
+    pub cost : f32,
 }
 
 impl Qualficiation {
