@@ -3,11 +3,16 @@ use std::path::PathBuf;
 use serde::Serialize;
 #[cfg(feature = "option")]
 use serde::Deserialize;
+#[cfg(feature = "binary")]
 use tabled::Tabled;
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::*;
+
 use crate::GcalcError;
 
 pub type GcalcResult<T> = Result<T, GcalcError>;
 
+#[cfg_attr(feature = "wasm",wasm_bindgen)]
 #[cfg_attr(feature= "option" ,derive(Serialize, Deserialize,Clone,Copy))]
 pub struct ColumnMap {
     pub count: usize,
@@ -33,7 +38,8 @@ impl ColumnMap {
     }
 }
 
-#[derive(Serialize, Tabled)]
+#[derive(Serialize)]
+#[cfg_attr(feature= "binary" ,derive(Tabled))]
 pub(crate) struct Qualficiation {
     pub count: usize,
     pub probability: String,
@@ -50,7 +56,8 @@ impl Qualficiation {
     }
 }
 
-#[derive(Serialize, Tabled)]
+#[derive(Serialize)]
+#[cfg_attr(feature= "binary" ,derive(Tabled))]
 pub(crate) struct Record {
     pub count: usize,
     pub probability : String,
@@ -75,6 +82,7 @@ pub enum CsvRef {
     None,
 }
 
+#[cfg_attr(feature = "wasm",wasm_bindgen)]
 #[cfg_attr(feature= "option" ,derive(Serialize, Deserialize,Clone,Copy))]
 #[derive(PartialEq)]
 pub enum CSVInvalidBehaviour {
@@ -106,6 +114,7 @@ pub enum RecordCursor {
     Stay,
 }
 
+#[cfg_attr(feature = "wasm",wasm_bindgen)]
 #[cfg_attr(feature= "option" ,derive(Serialize, Deserialize,Clone,Copy))]
 pub enum ProbType {
     Percentage,

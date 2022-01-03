@@ -9,22 +9,32 @@ use crate::utils;
 use crate::consts::*;
 #[cfg(feature = "option")]
 use serde::{Serialize, Deserialize};
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::*;
 
+#[cfg_attr(feature = "wasm",wasm_bindgen)]
 #[cfg(feature = "option")]
 #[derive(Serialize, Deserialize)]
 pub struct CalculatorOption {
-    count: usize,
-    prob_type: ProbType,
-    prob_precision : Option<usize>,
-    budget: Option<f32>,
-    fallback: CSVInvalidBehaviour,
-    no_header: bool,
-    strict: bool,
-    target: Option<f32>,
-    column_map: ColumnMap,
+    // These are public so that wasm can directly access it
+    pub count: usize,
+    pub prob: f32,
+    pub cost: f32,
+    pub constant: f32,
+    pub prob_type: ProbType,
+    pub prob_precision : Option<usize>,
+    pub budget: Option<f32>,
+    pub fallback: CSVInvalidBehaviour,
+    pub no_header: bool,
+    pub strict: bool,
+    pub target: Option<f32>,
+    pub column_map: ColumnMap,
     // Non-wasm exclusive options
+    #[cfg(not(feature = "wasm"))]
     format: TableFormat,
+    #[cfg(not(feature = "wasm"))]
     csv_ref: CsvRef, // -> For wasm it should be defined differently
+    #[cfg(not(feature = "wasm"))]
     out_option : OutOption,
 }
 
@@ -33,6 +43,9 @@ impl CalculatorOption {
     pub fn new() -> Self {
         Self {
             count: 0,
+            prob: 0.0f32,
+            cost: 0.0f32,
+            constant: 0.0f32,
             prob_type: ProbType::Fraction,
             prob_precision : None,
             budget: None,
@@ -42,8 +55,11 @@ impl CalculatorOption {
             target: None,
             column_map: ColumnMap::default(),
             // Non-wasm exclusive options
+            #[cfg(not(feature = "wasm"))]
             format: TableFormat::CSV,
-            csv_ref: CsvRef::None, // -> For wasm it should be defined differently
+            #[cfg(not(feature = "wasm"))]
+            csv_ref: CsvRef::None, 
+            #[cfg(not(feature = "wasm"))]
             out_option : OutOption::Console,
         }
     }
@@ -75,6 +91,9 @@ pub struct Calculator {
     // Which behaviour to take when csv rows ends
     record_behaviour: CsvRecordBehaviour, // Strict option
     out_option: OutOption,
+
+    #[cfg(feature = "wasm")]
+    pub calculated_csv: String,
 }
 impl Calculator {
     // <BUILDER>
@@ -94,11 +113,16 @@ impl Calculator {
             prob_type: ProbType::Fraction,
             record_behaviour : CsvRecordBehaviour::Repeat,
             out_option: OutOption::Console,
+            #[cfg(feature = "wasm")]
+            calculated_csv: String::new(),
         })
     }
 
     #[cfg(feature = "option")]
-    pub fn option(mut self, option: &CalculatorOption) -> Self {
+    pub fn option(mut self, option: &CalculatorOption) -> GcalcResult<Self> {
+        self.set_probability(option.prob, true)?;
+        self.set_constant(option.constant, true)?;
+        self.set_cost(option.cost, true);
         self.count = option.count;
         self.prob_type = option.prob_type;
         self.prob_precision  = option.prob_precision;
@@ -108,10 +132,13 @@ impl Calculator {
         self.set_strict_csv(option.strict);
         self.target_probability = option.target;
         self.column_map = option.column_map;
-        self.format = option.format;
-        self.csv_ref = option.csv_ref.clone();
-        self.out_option = option.out_option.clone();
-        self
+        #[cfg(not(feature = "wasm"))]
+        {
+            self.format = option.format;
+            self.csv_ref = option.csv_ref.clone();
+            self.out_option = option.out_option.clone();
+        }
+        Ok(self)
     }
 
     pub fn no_header(mut self, tv: bool) -> Self {
@@ -193,8 +220,12 @@ impl Calculator {
     
     // <SETTER>
     #[cfg(feature = "option")]
-    pub fn set_option(&mut self, option: &CalculatorOption) {
+    pub fn set_option(&mut self, option: &CalculatorOption) -> GcalcResult<()> {
         let option = option.to_owned();
+        self.set_probability(option.prob, true)?;
+        self.set_constant(option.constant, true)?;
+        self.set_cost(option.cost, true);
+
         self.count = option.count;
         self.prob_type = option.prob_type;
         self.prob_precision  = option.prob_precision;
@@ -204,9 +235,14 @@ impl Calculator {
         self.set_strict_csv(option.strict);
         self.target_probability = option.target;
         self.column_map = option.column_map;
-        self.format = option.format;
-        self.csv_ref = option.csv_ref.clone();
-        self.out_option = option.out_option.clone();
+        #[cfg(not(feature = "wasm"))]
+        {
+            self.format = option.format;
+            self.csv_ref = option.csv_ref.clone();
+            self.out_option = option.out_option.clone();
+        }
+
+        Ok(())
     }
 
     pub fn set_column_map(&mut self, column_map: ColumnMap) {
@@ -544,7 +580,7 @@ impl Calculator {
     }
 
     fn print_records(
-        &self,
+        &mut self,
         records :Vec<Record>,
         range: Option<(usize, usize)>
     ) -> GcalcResult<()> {
@@ -555,9 +591,11 @@ impl Calculator {
                     Err(err) => return Err(GcalcError::FormatFail(err)),
                 }
             }
+            #[cfg(feature = "binary")]
             TableFormat::Console => {
                 RecordFormatter::to_styled_table(records, range, tabled::Style::default())
             }
+            #[cfg(feature = "binary")]
             TableFormat::GFM => {
                 RecordFormatter::to_styled_table(records, range, tabled::Style::github_markdown())
             }
@@ -566,14 +604,16 @@ impl Calculator {
         Ok(())
     }
 
-    fn print_qual_table(&self, count: usize, cost: f32, probability: &str) -> GcalcResult<()> {
+    fn print_qual_table(&mut self, count: usize, cost: f32, probability: &str) -> GcalcResult<()> {
         let formatted = match self.format {
             TableFormat::CSV => {
                 QualFormatter::to_csv_table(Qualficiation::new(count, cost, probability))?
             }
+            #[cfg(feature = "binary")]
             TableFormat::Console => {
                 QualFormatter::to_styled_table(Qualficiation::new(count, cost, probability), tabled::Style::default())
             }
+            #[cfg(feature = "binary")]
             TableFormat::GFM => {
                 QualFormatter::to_styled_table(Qualficiation::new(count, cost, probability), tabled::Style::github_markdown())
             }
@@ -582,7 +622,13 @@ impl Calculator {
         Ok(())
     }
 
-    fn yield_table(&self, table: &str) -> GcalcResult<()> {
+    fn yield_table(&mut self, table: &str) -> GcalcResult<()> {
+        #[cfg(feature = "wasm")]
+        {
+            self.calculated_csv = table.to_string();
+        }
+
+        #[cfg(not(feature = "wasm"))]
         match &self.out_option {
             OutOption::Console => print!("{}", table),
             OutOption::File(path) => {
@@ -632,16 +678,20 @@ impl CalcState {
 #[cfg_attr(feature= "option" ,derive(Serialize, Deserialize))]
 #[derive(Clone,Copy)]
 pub enum TableFormat {
-    Console,
     CSV,
+    #[cfg(feature = "binary")]
+    Console,
+    #[cfg(feature = "binary")]
     GFM,
 }
 
 impl TableFormat {
     pub fn from_str(string : &str) -> GcalcResult<Self> {
         match string.to_lowercase().as_str() {
+            #[cfg(feature = "binary")]
             "console" => Ok(Self::Console),
             "csv" => Ok(Self::CSV),
+            #[cfg(feature = "binary")]
             "gfm" | "github" => Ok(Self::GFM),
             _ => Err(GcalcError::InvalidConversion(format!("{} is not a valid table format", string))),
         }

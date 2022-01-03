@@ -1,5 +1,7 @@
 use std::error::Error;
 use csv::WriterBuilder;
+
+#[cfg(feature = "binary")]
 use tabled::{Table, Style};
 
 use crate::{models::{Record, Qualficiation}, GcalcResult, GcalcError};
@@ -19,6 +21,7 @@ impl QualFormatter {
         Ok(data)
     }
 
+    #[cfg(feature = "binary")]
     pub fn to_styled_table(qual :Qualficiation, style: Style) -> String {
         let table : Table = Table::new(vec![qual]).with(style);
         table.to_string()
@@ -50,6 +53,7 @@ impl RecordFormatter {
         Ok(data)
     }
 
+    #[cfg(feature = "binary")]
     pub fn to_styled_table(
         values : Vec<Record>,
         range: Option<(usize,usize)>,
