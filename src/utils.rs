@@ -2,9 +2,9 @@ use crate::{GcalcResult, GcalcError};
 use crate::models::ProbType;
 
 /// Calculate geometric series of given inputs
-pub fn geometric_series(count: usize, probabilty: f32) -> f32 {
-    let a = probabilty;
-    let r = 1f32 - probabilty;
+pub fn geometric_series(count: usize, probability: f32) -> f32 {
+    let a = probability;
+    let r = 1f32 - probability;
     let n = count as i32;
 
     // Formula
@@ -12,15 +12,15 @@ pub fn geometric_series(count: usize, probabilty: f32) -> f32 {
 }
 
 /// Calculate geometric_series with given qualficiation
-pub fn geometric_series_qual(probabilty: f32, qalification: f32) -> usize {
+pub fn geometric_series_qual(probability: f32, qalification: f32) -> usize {
     let t = qalification;
-    let a = probabilty;
-    let r = 1f32 - probabilty;
+    let a = probability;
+    let r = 1f32 - probability;
     let count_similar = (1f32 - (t * (1f32 - r) / a)).log(r);
     count_similar.ceil() as usize
 }
 
-/// Get probabilty as lenient as possible
+/// Get probability as lenient as possible
 pub fn get_prob_alap(number_str: &str, suffix: Option<&str>) -> GcalcResult<f32> {
     let mut number = number_str.to_owned();
 
@@ -58,7 +58,7 @@ pub fn get_number_as_fraction(number: f32) -> GcalcResult<f32> {
     }
 }
 
-/// Get probabilty according to given type
+/// Get probability according to given type
 ///
 /// Available types are
 /// - Percentage

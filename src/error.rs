@@ -15,7 +15,7 @@ pub enum GcalcError {
     CsvError(String),
     #[error("Failed to parse csv\n= {0}")]
     FailedCsvParse(csv::Error),
-    #[error("Invalid probabilty form\n= {0}")]
+    #[error("Invalid probability form\n= {0}")]
     InvalidProb(String),
     #[error("Invalid conversion\n= {0}")]
     InvalidConversion(String),

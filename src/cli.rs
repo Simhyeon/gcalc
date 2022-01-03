@@ -139,14 +139,6 @@ impl Cli {
         Ok(())
     }
 
-    // Utils, DRY codes
-    fn get_prob_as_fraction_from_args(args: &ArgMatches) -> GcalcResult<f32> {
-        let probability = args.value_of("prob")
-            .unwrap_or_else(|| {eprintln!("Using 1.0 as default probability"); "1.0"});
-        let probability = utils::get_prob_alap(probability, None)?;
-        Ok(probability)
-    }
-
     fn set_calculator_attribute(cal : &mut Calculator, args: &ArgMatches) -> GcalcResult<()> {
         #[cfg(feature = "option")]
         if let Some(file) = args.value_of("option") {
@@ -154,8 +146,10 @@ impl Cli {
             cal.set_option(&option);
         }
 
-        let prob = Self::get_prob_as_fraction_from_args(args)?;
-        cal.set_probability(prob, true)?;
+        if let Some(prob) = args.value_of("prob") {
+            let probability = utils::get_prob_alap(prob, None)?;
+            cal.set_probability(probability, true)?;
+        }
 
         if let Some(cost) = args.value_of("cost") {
             let cost = cost.parse().map_err( |_| GcalcError::ParseError("Cost should be a number".to_owned()))?;
