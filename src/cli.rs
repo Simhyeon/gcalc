@@ -14,7 +14,7 @@ impl Cli {
 
     fn args_builder() -> ArgMatches {
         App::new("gcalc")
-            .version("0.1.0")
+            .version("0.2.0")
             .author("Simon creek <simoncreek@tutanota.com>")
             .about("Gcalc is a gacha simulator for game development and other decision makings.") // meta information end
             .subcommand(
