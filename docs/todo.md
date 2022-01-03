@@ -1,6 +1,8 @@
 # TODO
 
 * [x] Update readme.md
+* [ ] Make crate compatible with docs.rs
+* [ ] Probe if library usage is ergonmic enough
 * [ ] Create wasm file
 * [ ] Create website
 * [ ] Use github release api for automated draft
