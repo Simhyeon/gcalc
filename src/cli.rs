@@ -234,7 +234,7 @@ impl Cli {
     }
 
     fn subcommand_reference() -> GcalcResult<()> {
-        std::fs::write(std::path::Path::new("ref.csv"), r#"count,probability,bonus,cost"#)?;
+        std::fs::write(std::path::Path::new("ref.csv"), r#"count,probability,constant,cost"#)?;
         Ok(())
     }
 }
