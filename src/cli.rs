@@ -34,6 +34,7 @@ impl Cli {
                 .arg(Arg::new("noheader").help("CSV without header").long("noheader"))
                 .arg(Arg::new("out").help("Out file").short('o').long("out").takes_value(true))
                 .arg(Arg::new("fallback").help("Set csv value fallback {rollback|ignore|none}").long("fallback").default_value("none"))
+                .arg(Arg::new("strict").help("Set strict CSV reader mode").short('s').long("strict"))
             )
             .subcommand(
                 App::new("qual")
@@ -52,6 +53,7 @@ impl Cli {
                 .arg(Arg::new("noheader").help("CSV without header").long("noheader"))
                 .arg(Arg::new("out").help("Out file").short('o').long("out").takes_value(true))
                 .arg(Arg::new("fallback").help("Set csv value fallback {rollback|ignore|none}").long("fallback").default_value("none"))
+                .arg(Arg::new("strict").help("Set strict CSV reader mode").short('s').long("strict"))
             )
             .subcommand(
                 App::new("range")
@@ -62,7 +64,7 @@ impl Cli {
                 .arg(Arg::new("reference").help("Reference file").short('r').long("ref").takes_value(true).conflicts_with("refin"))
                 .arg(Arg::new("refin").help("Reference from stdin").long("refin").conflicts_with("reference"))
                 .arg(Arg::new("count").required(true).help("Counts to execute").short('c').long("count").takes_value(true))
-                .arg(Arg::new("start").help("Starting index to print").short('s').long("start").takes_value(true))
+                .arg(Arg::new("start").help("Starting index to print").short('S').long("start").takes_value(true))
                 .arg(Arg::new("format").help("Table format(csv|console|gfm)").short('f').long("format").takes_value(true))
                 .arg(Arg::new("precision").help("Precision").short('P').long("precision").takes_value(true))
                 .arg(Arg::new("probtype").help("Probability type").short('T').long("type").takes_value(true))
@@ -70,6 +72,7 @@ impl Cli {
                 .arg(Arg::new("noheader").help("CSV without header").long("noheader"))
                 .arg(Arg::new("out").help("Out file").short('o').long("out").takes_value(true))
                 .arg(Arg::new("fallback").help("Set csv value fallback").long("fallback").default_value("none"))
+                .arg(Arg::new("strict").help("Set strict CSV reader mode").short('s').long("strict"))
             ) // "range" subcommand
             .subcommand(App::new("reference").about("Create reference file")) // "reference" file creation subcommand
             .get_matches()
@@ -201,6 +204,8 @@ impl Cli {
         }
 
         cal.set_csv_value_fallback(args.value_of("fallback").unwrap_or("none"))?;
+
+        cal.set_strict_csv(args.is_present("strict"));
 
         Self::set_custom_column_order(cal, args)?;
 
