@@ -19,11 +19,13 @@ name = "gcalc"
 path = "src/lib.rs"
 
 [features]
-binary = ["clap"]
+binary = ["clap", "option"]
+option = ["serde_json"]
 
 [dependencies]
 clap = { version = "3.0.0", default-features = false, features = ["std"], optional=true}
 csv = "1.1.6"
 thiserror = "1.0.25"
 serde = { version = "1.0.126", features = ["derive"]}
+serde_json = { version = "1.0.59", optional = true }
 tabled = "0.3.0"
