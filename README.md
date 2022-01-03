@@ -65,7 +65,7 @@ cargo install gcalc --features binary --locked
 **libary**
 ```toml
 [dependencies]
-gcalc = "0.1.0"
+gcalc = "0.2.0"
 ```
 
 ## Usage
@@ -82,16 +82,21 @@ gcalc <SUBCOMMAND>
 
 # Print from 0 to 10 as github markdown formatted table, which has a precision of
 # 2 digits. Each try has cost of 1000.
-cargo run --features binary -- range 0.2 --count 10 --format gfm --precision 2 --cost 1000
+gcalc range --probabilty 0.2 --count 10 --format gfm --precision 2 --cost 1000
 
 # Print probability changes illustrated as csv formatted table, which has a
 # precision of 2 digits. Target probability is 0.8.
-cargo run --features binary -- cond 0.2 --format csv --precision 2 --target 0.8
+gcalc cond --probabilty 0.2 --format csv --precision 2 --target 0.8
+
+# Print how many counts are required to reach 0.99 probability with 0.01 change of each try
+# Qual subcommand uses geometric-series formula if no reference was given as an argument
+# Which is efficient for very small probabilty cases
+gcalc qual --probabilty 0.001 -f gfm --target 0.99 --precision 2
 ```
 
 Results of prior usages are,
-```
-# cargo run --features binary -- range 0.2 --count 10 --format gfm --precision 2 --cost 1000
+```bash
+# gcalc range --probabilty 0.2 --count 10 --format gfm --precision 2 --cost 1000
 | count | probability | cost |
 |-------+-------------+------|
 |   1   |    0.20     | 1000 |
@@ -103,7 +108,7 @@ Results of prior usages are,
 |   7   |    0.79     | 7000 |
 |   8   |    0.83     | 8000 |
 
-# cargo run --features binary -- cond 0.2 --format csv --precision 2 --target 0.8
+# gcalc cond --probability 0.2 --format csv --precision 2 --target 0.8
 count,probability,cost
 1,0.20,0.0
 2,0.36,0.0
@@ -113,6 +118,11 @@ count,probability,cost
 6,0.74,0.0
 7,0.79,0.0
 8,0.83,0.0
+
+# gcalc qual --probability 0.001 -f gfm --target 0.99 --precision 2
+| count | probability | cost |
+|-------+-------------+------|
+| 4602  |    0.99     |  0   |
 ```
 
 ## Goal
