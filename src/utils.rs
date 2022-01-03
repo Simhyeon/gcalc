@@ -21,7 +21,6 @@ pub fn geometric_series_qual(probabilty: f32, qalification: f32) -> usize {
 
 /// Get probabilty as lenient as possible
 pub fn get_prob_alap(number_str: &str, suffix: Option<&str>) -> GcalcResult<f32> {
-    let prob : f32;
     let mut number = number_str.to_owned();
 
     // Remove general suffix
@@ -38,6 +37,11 @@ pub fn get_prob_alap(number_str: &str, suffix: Option<&str>) -> GcalcResult<f32>
 
     let number = number.parse::<f32>()?;
 
+    get_number_as_fraction(number)
+}
+
+pub fn get_number_as_fraction(number: f32) -> GcalcResult<f32> {
+    let prob: f32;
     if number > 0.0f32 { 
         // CASE : 0.0 <= num <= 1.0
         if number <= 1.0f32 { 
@@ -45,11 +49,11 @@ pub fn get_prob_alap(number_str: &str, suffix: Option<&str>) -> GcalcResult<f32>
         } else if number <= 100.0f32 { // CASE : 1.0 < num <= 100.0
             prob = number / 100.0f32;
         } else {
-            return Err(GcalcError::InvalidProb(format!("Probability {} is not a valid format", number_str)));
+            return Err(GcalcError::InvalidProb(format!("Probability \"{}\" is not a valid number", number)));
         }
         Ok(prob)
     } else {
-        Err(GcalcError::InvalidProb(format!("Probability {} is not a valid format", number_str)))
+        Err(GcalcError::InvalidProb(format!("Probability \"{}\" should be a positive number", number)))
     }
 }
 
