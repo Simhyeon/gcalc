@@ -1,4 +1,5 @@
-use crate::{calc::ProbType, GcalcResult, GcalcError};
+use crate::{GcalcResult, GcalcError};
+use crate::models::ProbType;
 
 /// Calculate geometric series of given inputs
 pub fn geometric_series(count: usize, probabilty: f32) -> f32 {
