@@ -1,5 +1,24 @@
 use crate::{calc::ProbType, GcalcResult, GcalcError};
 
+/// Calculate geometric series of given inputs
+pub fn geometric_series(count: usize, probabilty: f32) -> f32 {
+    let a = probabilty;
+    let r = 1f32 - probabilty;
+    let n = count as i32;
+
+    // Formula
+    a * (1f32 - r.powi(n) ) / (1f32 - r)
+}
+
+/// Calculate geometric_series with given qualficiation
+pub fn geometric_series_qual(probabilty: f32, qalification: f32) -> usize {
+    let t = qalification;
+    let a = probabilty;
+    let r = 1f32 - probabilty;
+    let count_similar = (1f32 - (t * (1f32 - r) / a)).log(r);
+    count_similar.ceil() as usize
+}
+
 /// Get probabilty as lenient as possible
 pub fn get_prob_alap(number_str: &str, suffix: Option<&str>) -> GcalcResult<f32> {
     let prob : f32;
