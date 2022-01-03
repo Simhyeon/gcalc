@@ -192,8 +192,14 @@ impl Calculator {
 
         // Simply calculate geometric series
         if let CsvRef::None = self.csv_ref {
+
+            if self.state.probability == 1.0 {
+                total_count = 1;
+                total_cost = self.state.cost;
+                final_probability = utils::get_prob_as_formatted(1.0f32, &self.prob_type, &self.prob_precision);
+            } 
             // Probability and possibly with budget
-            if let Some(target) = self.target_probability {
+            else if let Some(target) = self.target_probability {
                 let count = utils::geometric_series_qual(self.state.probability, target);
                 let count = if let Some(bud) = self.budget  {
                     if count as f32 * self.state.cost > bud {
