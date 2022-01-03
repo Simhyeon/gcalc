@@ -21,6 +21,8 @@ impl Cli {
                 App::new("cond")
                 .about("Conditional calculation")
                 .arg(Arg::new("prob").help("Basic probability").short('p').long("probability").takes_value(true))
+                .arg(Arg::new("cost").help("Cost per try").short('C').long("cost").takes_value(true))
+                .arg(Arg::new("constant").help("Constant value to be added into probability").long("constant").takes_value(true))
                 .arg(Arg::new("reference").help("Reference file").short('r').long("ref").takes_value(true).conflicts_with("refin"))
                 .arg(Arg::new("refin").help("Reference from stdin").long("refin").conflicts_with("reference"))
                 .arg(Arg::new("budget").help("Budget of total cost").short('b').long("budget").takes_value(true))
@@ -28,16 +30,17 @@ impl Cli {
                 .arg(Arg::new("format").help("Table format(csv|console|gfm)").short('f').long("format").takes_value(true))
                 .arg(Arg::new("precision").help("Precision").short('P').long("precision").takes_value(true))
                 .arg(Arg::new("probtype").help("Probability type").short('T').long("type").takes_value(true))
-                .arg(Arg::new("cost").help("Cost per try").short('C').long("cost").takes_value(true))
                 .arg(Arg::new("column").help("Column mapping").short('l').long("column").takes_value(true))
                 .arg(Arg::new("noheader").help("CSV without header").long("noheader"))
                 .arg(Arg::new("out").help("Out file").short('o').long("out").takes_value(true))
-                .arg(Arg::new("fallable").help("Set csv value fallable").long("fallable"))
+                .arg(Arg::new("fallback").help("Set csv value fallback {rollback|ignore|none}").long("fallback").default_value("none"))
             )
             .subcommand(
                 App::new("qual")
                 .about("Conditional calculation but only prints result")
                 .arg(Arg::new("prob").help("Basic probability").short('p').long("probability").takes_value(true))
+                .arg(Arg::new("cost").help("Cost per try").short('C').long("cost").takes_value(true))
+                .arg(Arg::new("constant").help("Constant value to be added into probability").long("constant").takes_value(true))
                 .arg(Arg::new("reference").help("Reference file").short('r').long("ref").takes_value(true).conflicts_with("refin"))
                 .arg(Arg::new("refin").help("Reference from stdin").long("refin").conflicts_with("reference"))
                 .arg(Arg::new("budget").help("Budget of total cost").short('b').long("budget").takes_value(true))
@@ -45,16 +48,17 @@ impl Cli {
                 .arg(Arg::new("format").help("Table format(csv|console|gfm)").short('f').long("format").takes_value(true))
                 .arg(Arg::new("precision").help("Precision").short('P').long("precision").takes_value(true))
                 .arg(Arg::new("probtype").help("Probability type").short('T').long("type").takes_value(true))
-                .arg(Arg::new("cost").help("Cost per try").short('C').long("cost").takes_value(true))
                 .arg(Arg::new("column").help("Column mapping").short('l').long("column").takes_value(true))
                 .arg(Arg::new("noheader").help("CSV without header").long("noheader"))
                 .arg(Arg::new("out").help("Out file").short('o').long("out").takes_value(true))
-                .arg(Arg::new("fallable").help("Set csv value fallable").long("fallable"))
+                .arg(Arg::new("fallback").help("Set csv value fallback {rollback|ignore|none}").long("fallback").default_value("none"))
             )
             .subcommand(
                 App::new("range")
                 .about("Prints range of calculations")
                 .arg(Arg::new("prob").help("Basic probability").short('p').long("probability").takes_value(true))
+                .arg(Arg::new("cost").help("Cost per try").short('C').long("cost").takes_value(true))
+                .arg(Arg::new("constant").help("Constant value to be added into probability").long("constant").takes_value(true))
                 .arg(Arg::new("reference").help("Reference file").short('r').long("ref").takes_value(true).conflicts_with("refin"))
                 .arg(Arg::new("refin").help("Reference from stdin").long("refin").conflicts_with("reference"))
                 .arg(Arg::new("count").required(true).help("Counts to execute").short('c').long("count").takes_value(true))
@@ -62,11 +66,10 @@ impl Cli {
                 .arg(Arg::new("format").help("Table format(csv|console|gfm)").short('f').long("format").takes_value(true))
                 .arg(Arg::new("precision").help("Precision").short('P').long("precision").takes_value(true))
                 .arg(Arg::new("probtype").help("Probability type").short('T').long("type").takes_value(true))
-                .arg(Arg::new("cost").help("Cost per try").short('C').long("cost").takes_value(true))
                 .arg(Arg::new("column").help("Column mapping").short('l').long("column").takes_value(true))
                 .arg(Arg::new("noheader").help("CSV without header").long("noheader"))
                 .arg(Arg::new("out").help("Out file").short('o').long("out").takes_value(true))
-                .arg(Arg::new("fallable").help("Set csv value fallable").long("fallable"))
+                .arg(Arg::new("fallback").help("Set csv value fallback").long("fallback").default_value("none"))
             ) // "range" subcommand
             .subcommand(App::new("reference").about("Create reference file")) // "reference" file creation subcommand
             .get_matches()
@@ -93,13 +96,12 @@ impl Cli {
     }
 
     fn subcommand_range(args: &ArgMatches) -> GcalcResult<()> {
-        let probability = Self::get_sane_probability(args)?;
         let count = args.value_of("count")
             .unwrap()
             .parse()
             .map_err( |_| GcalcError::ParseError("Count should be a positive integer".to_owned()))?;
 
-        let mut cal = Calculator::new(probability)?;
+        let mut cal = Calculator::new()?;
         let mut min = 0;
         if let Some(index) = args.value_of("start") {
             min = index.parse()
@@ -113,8 +115,7 @@ impl Cli {
     }
 
     fn subcommand_conditional(args: &ArgMatches) -> GcalcResult<()> {
-        let prob = Self::get_sane_probability(args)?;
-        let mut cal = Calculator::new(prob)?;
+        let mut cal = Calculator::new()?;
         Self::set_calculator_attribute(&mut cal, args)?;
 
         if let Some(target) = args.value_of("target") {
@@ -132,8 +133,7 @@ impl Cli {
     }
 
     fn subcommand_qual(args: &ArgMatches) -> GcalcResult<()> {
-        let prob = Self::get_sane_probability(args)?;
-        let mut cal = Calculator::new(prob)?;
+        let mut cal = Calculator::new()?;
         Self::set_calculator_attribute(&mut cal, args)?;
 
         if let Some(target) = args.value_of("target") {
@@ -151,7 +151,7 @@ impl Cli {
     }
 
     // Utils, DRY codes
-    fn get_sane_probability(args: &ArgMatches) -> GcalcResult<f32> {
+    fn get_prob_as_fraction_from_args(args: &ArgMatches) -> GcalcResult<f32> {
         let probability = args.value_of("prob")
             .unwrap_or_else(|| {eprintln!("Using 1.0 as default probability"); "1.0"});
         let probability = utils::get_prob_alap(probability, None)?;
@@ -159,9 +159,17 @@ impl Cli {
     }
 
     fn set_calculator_attribute(cal : &mut Calculator, args: &ArgMatches) -> GcalcResult<()> {
+        let prob = Self::get_prob_as_fraction_from_args(args)?;
+        cal.set_probability(prob, true)?;
+
         if let Some(cost) = args.value_of("cost") {
             let cost = cost.parse().map_err( |_| GcalcError::ParseError("Cost should be a number".to_owned()))?;
-            cal.set_cost(cost);
+            cal.set_cost(cost, true);
+        }
+
+        if let Some(cost) = args.value_of("constant") {
+            let constant = cost.parse().map_err( |_| GcalcError::ParseError("Constant should be a number".to_owned()))?;
+            cal.set_constant(constant, true)?;
         }
 
         // Reference and refin is mutual exclusive
@@ -192,7 +200,7 @@ impl Cli {
             cal.set_out_file(std::path::Path::new(file));
         }
 
-        cal.set_csv_fallable(args.is_present("fallable"));
+        cal.set_csv_value_fallback(args.value_of("fallback").unwrap_or("none"))?;
 
         Self::set_custom_column_order(cal, args)?;
 
@@ -210,17 +218,17 @@ impl Cli {
             if split_orders.len() < COLUMN_LEN {
                 return Err(GcalcError::InvalidArgument(format!("Column's length should be bigger or equal to \"{}\"", COLUMN_LEN)));
             }
-            let (mut count, mut probability, mut added, mut cost) = (COUNT_INDEX, BASIC_PROB_INDEX, ADDED_PROB_INDEX, COST_INDEX);
+            let (mut count, mut probability, mut constant, mut cost) = (COUNT_INDEX, BASIC_PROB_INDEX, ADDED_PROB_INDEX, COST_INDEX);
             for (index, &item) in split_orders.iter().enumerate() {
                 match item {
                     "count" => count = index,
                     "probability" => probability = index,
-                    "added" => added = index,
+                    "constant" => constant = index,
                     "cost" => cost = index,
                     _ => (), // Skip item
                 }
             } 
-            cal.set_column_map(ColumnMap::new(count, probability, added, cost));
+            cal.set_column_map(ColumnMap::new(count, probability, constant, cost));
         }
         Ok(())
     }
