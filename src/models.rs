@@ -1,16 +1,30 @@
 use std::path::PathBuf;
 
 use serde::Serialize;
+#[cfg(feature = "option")]
+use serde::Deserialize;
 use tabled::Tabled;
-
 use crate::GcalcError;
+
 pub type GcalcResult<T> = Result<T, GcalcError>;
 
+#[cfg_attr(feature= "option" ,derive(Serialize, Deserialize,Clone,Copy))]
 pub struct ColumnMap {
     pub count: usize,
     pub probability: usize,
     pub constant: usize,
     pub cost: usize,
+}
+
+impl Default for ColumnMap {
+    fn default() -> Self {
+        Self {
+            count: 0,
+            probability: 1,
+            constant: 2,
+            cost: 3,
+        }
+    }
 }
 
 impl ColumnMap {
@@ -53,6 +67,7 @@ impl Record {
     }
 }
 
+#[cfg_attr(feature= "option" ,derive(Serialize, Deserialize, Clone))]
 #[derive(PartialEq)]
 pub enum CsvRef {
     Raw(String),
@@ -60,6 +75,7 @@ pub enum CsvRef {
     None,
 }
 
+#[cfg_attr(feature= "option" ,derive(Serialize, Deserialize,Clone,Copy))]
 #[derive(PartialEq)]
 pub enum CSVInvalidBehaviour {
     Rollback,
@@ -79,6 +95,7 @@ impl CSVInvalidBehaviour {
     }
 }
 
+#[cfg_attr(feature= "option" ,derive(Serialize, Deserialize,Clone))]
 pub enum OutOption {
     Console,
     File(PathBuf),
@@ -88,3 +105,20 @@ pub enum RecordCursor {
     Next,
     Stay,
 }
+
+#[cfg_attr(feature= "option" ,derive(Serialize, Deserialize,Clone,Copy))]
+pub enum ProbType {
+    Percentage,
+    Float,
+}
+
+impl ProbType {
+    pub fn from_str(string : &str) -> GcalcResult<Self> {
+        match string.to_lowercase().as_str() {
+            "percentage" | "percent" => Ok(Self::Percentage),
+            "float" => Ok(Self::Float),
+            _ => Err(GcalcError::InvalidConversion(format!("{} is not a valid table format", string))),
+        }
+    }
+}
+
