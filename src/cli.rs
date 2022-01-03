@@ -20,13 +20,13 @@ impl Cli {
             .subcommand(
                 App::new("cond")
                 .about("Conditional calculation")
-                .arg(Arg::new("PROB").help("Basic probability").takes_value(true))
+                .arg(Arg::new("prob").help("Basic probability").short('p').long("probability").takes_value(true))
                 .arg(Arg::new("reference").help("Reference file").short('r').long("ref").takes_value(true).conflicts_with("refin"))
                 .arg(Arg::new("refin").help("Reference from stdin").long("refin").conflicts_with("reference"))
                 .arg(Arg::new("budget").help("Budget of total cost").short('b').long("budget").takes_value(true))
                 .arg(Arg::new("target").help("Target probability").short('t').long("target").takes_value(true))
                 .arg(Arg::new("format").help("Table format(csv|console|gfm)").short('f').long("format").takes_value(true))
-                .arg(Arg::new("precision").help("Precision").short('p').long("precision").takes_value(true))
+                .arg(Arg::new("precision").help("Precision").short('P').long("precision").takes_value(true))
                 .arg(Arg::new("probtype").help("Probability type").short('T').long("type").takes_value(true))
                 .arg(Arg::new("cost").help("Cost per try").short('C').long("cost").takes_value(true))
                 .arg(Arg::new("column").help("Column mapping").short('l').long("column").takes_value(true))
@@ -37,13 +37,13 @@ impl Cli {
             .subcommand(
                 App::new("qual")
                 .about("Conditional calculation but only prints result")
-                .arg(Arg::new("PROB").help("Basic probability").takes_value(true))
+                .arg(Arg::new("prob").help("Basic probability").short('p').long("probability").takes_value(true))
                 .arg(Arg::new("reference").help("Reference file").short('r').long("ref").takes_value(true).conflicts_with("refin"))
                 .arg(Arg::new("refin").help("Reference from stdin").long("refin").conflicts_with("reference"))
                 .arg(Arg::new("budget").help("Budget of total cost").short('b').long("budget").takes_value(true))
                 .arg(Arg::new("target").help("Target probability").short('t').long("target").takes_value(true))
                 .arg(Arg::new("format").help("Table format(csv|console|gfm)").short('f').long("format").takes_value(true))
-                .arg(Arg::new("precision").help("Precision").short('p').long("precision").takes_value(true))
+                .arg(Arg::new("precision").help("Precision").short('P').long("precision").takes_value(true))
                 .arg(Arg::new("probtype").help("Probability type").short('T').long("type").takes_value(true))
                 .arg(Arg::new("cost").help("Cost per try").short('C').long("cost").takes_value(true))
                 .arg(Arg::new("column").help("Column mapping").short('l').long("column").takes_value(true))
@@ -54,13 +54,13 @@ impl Cli {
             .subcommand(
                 App::new("range")
                 .about("Prints range of calculations")
-                .arg(Arg::new("PROB").help("Basic probability").takes_value(true))
+                .arg(Arg::new("prob").help("Basic probability").short('p').long("probability").takes_value(true))
                 .arg(Arg::new("reference").help("Reference file").short('r').long("ref").takes_value(true).conflicts_with("refin"))
                 .arg(Arg::new("refin").help("Reference from stdin").long("refin").conflicts_with("reference"))
                 .arg(Arg::new("count").required(true).help("Counts to execute").short('c').long("count").takes_value(true))
                 .arg(Arg::new("start").help("Starting index to print").short('s').long("start").takes_value(true))
                 .arg(Arg::new("format").help("Table format(csv|console|gfm)").short('f').long("format").takes_value(true))
-                .arg(Arg::new("precision").help("Precision").short('p').long("precision").takes_value(true))
+                .arg(Arg::new("precision").help("Precision").short('P').long("precision").takes_value(true))
                 .arg(Arg::new("probtype").help("Probability type").short('T').long("type").takes_value(true))
                 .arg(Arg::new("cost").help("Cost per try").short('C').long("cost").takes_value(true))
                 .arg(Arg::new("column").help("Column mapping").short('l').long("column").takes_value(true))
@@ -152,7 +152,7 @@ impl Cli {
 
     // Utils, DRY codes
     fn get_sane_probability(args: &ArgMatches) -> GcalcResult<f32> {
-        let probability = args.value_of("PROB")
+        let probability = args.value_of("prob")
             .unwrap_or_else(|| {eprintln!("Using 1.0 as default probability"); "1.0"});
         let probability = utils::get_prob_alap(probability, None)?;
         Ok(probability)
