@@ -9,13 +9,13 @@ pub type GcalcResult<T> = Result<T, GcalcError>;
 pub struct ColumnMap {
     pub count: usize,
     pub probability: usize,
-    pub added: usize,
+    pub constant: usize,
     pub cost: usize,
 }
 
 impl ColumnMap {
-    pub fn new( count: usize, probability: usize, added: usize, cost: usize) -> Self {
-        Self { count, probability, added, cost, }
+    pub fn new( count: usize, probability: usize, constant: usize, cost: usize) -> Self {
+        Self { count, probability, constant, cost, }
     }
 }
 
@@ -58,6 +58,25 @@ pub enum CsvRef {
     Raw(String),
     File(PathBuf),
     None,
+}
+
+#[derive(PartialEq)]
+pub enum CSVInvalidBehaviour {
+    Rollback,
+    Ignore,
+    None,
+}
+
+impl CSVInvalidBehaviour {
+    pub fn from_str(text: &str) -> GcalcResult<Self> {
+        let varirant = match text.to_lowercase().as_str() {
+            "rollback" => Self::Rollback,
+            "ignore" => Self::Ignore,
+            "none" => Self::None,
+            _ => return Err(GcalcError::InvalidConversion(format!("{} is not a valid csv fallback behaviour variant", text))),
+        };
+        Ok(varirant)
+    }
 }
 
 pub enum OutOption {
