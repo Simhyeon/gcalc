@@ -2,11 +2,61 @@ use std::path::Path;
 
 use csv::StringRecordsIntoIter;
 
-use crate::models::{Record, Qualficiation, ColumnMap, CsvRef, OutOption, RecordCursor, CSVInvalidBehaviour};
+use crate::models::{Record, Qualficiation, ColumnMap, CsvRef, OutOption, RecordCursor, CSVInvalidBehaviour, ProbType};
 use crate::{GcalcResult, GcalcError};
 use crate::formatter::{RecordFormatter, QualFormatter};
 use crate::utils;
 use crate::consts::*;
+#[cfg(feature = "option")]
+use serde::{Serialize, Deserialize};
+
+#[cfg(feature = "option")]
+#[derive(Serialize, Deserialize)]
+pub struct CalculatorOption {
+    count: usize,
+    prob_type: ProbType,
+    prob_precision : Option<usize>,
+    budget: Option<f32>,
+    fallback: CSVInvalidBehaviour,
+    no_header: bool,
+    strict: bool,
+    target: Option<f32>,
+    column_map: ColumnMap,
+    // Non-wasm exclusive options
+    format: TableFormat,
+    csv_ref: CsvRef, // -> For wasm it should be defined differently
+    out_option : OutOption,
+}
+
+#[cfg(feature = "option")]
+impl CalculatorOption {
+    pub fn new() -> Self {
+        Self {
+            count: 0,
+            prob_type: ProbType::Float,
+            prob_precision : None,
+            budget: None,
+            fallback: CSVInvalidBehaviour::None,
+            no_header: false,
+            strict: false,
+            target: None,
+            column_map: ColumnMap::default(),
+            // Non-wasm exclusive options
+            format: TableFormat::CSV,
+            csv_ref: CsvRef::None, // -> For wasm it should be defined differently
+            out_option : OutOption::Console,
+        }
+    }
+
+    pub fn to_json(&self) -> GcalcResult<String> {
+        Ok(serde_json::to_string_pretty(self).expect("Failed to serialize option to json"))
+    }
+
+    pub fn from_file(path: &std::path::Path) -> GcalcResult<Self> {
+        let option = serde_json::from_str(&std::fs::read_to_string(path)?).expect("Failed to read option file");
+        Ok(option)
+    }
+}
 
 // TODO 
 // Csv file
@@ -17,13 +67,13 @@ pub struct Calculator {
     csv_ref: CsvRef,
     csv_no_header: bool,
     column_map: ColumnMap,
-    fallable_csv: CSVInvalidBehaviour,
+    csv_invalid_behaviour: CSVInvalidBehaviour,
     prob_precision: Option<usize>,
     budget: Option<f32>,
     target_probability : Option<f32>,
     prob_type: ProbType,
     // Which behaviour to take when csv rows ends
-    record_behaviour: CsvRecordBehaviour,
+    record_behaviour: CsvRecordBehaviour, // Strict option
     out_option: OutOption,
 }
 impl Calculator {
@@ -36,8 +86,8 @@ impl Calculator {
             csv_ref : CsvRef::None,
             csv_no_header: false,
             column_map: ColumnMap::new(COUNT_INDEX, BASIC_PROB_INDEX, ADDED_PROB_INDEX, COST_INDEX),
-            format: TableFormat::Csv,
-            fallable_csv: CSVInvalidBehaviour::None,
+            format: TableFormat::CSV,
+            csv_invalid_behaviour: CSVInvalidBehaviour::None,
             prob_precision: None,
             target_probability: None,
             budget: None,
@@ -45,6 +95,23 @@ impl Calculator {
             record_behaviour : CsvRecordBehaviour::Repeat,
             out_option: OutOption::Console,
         })
+    }
+
+    #[cfg(feature = "option")]
+    pub fn option(mut self, option: &CalculatorOption) -> Self {
+        self.count = option.count;
+        self.prob_type = option.prob_type;
+        self.prob_precision  = option.prob_precision;
+        self.budget = option.budget;
+        self.csv_invalid_behaviour = option.fallback;
+        self.csv_no_header = option.no_header;
+        self.set_strict_csv(option.strict);
+        self.target_probability = option.target;
+        self.column_map = option.column_map;
+        self.format = option.format;
+        self.csv_ref = option.csv_ref.clone();
+        self.out_option = option.out_option.clone();
+        self
     }
 
     pub fn no_header(mut self, tv: bool) -> Self {
@@ -119,12 +186,29 @@ impl Calculator {
     }
 
     pub fn csv_fallback(mut self, behaviour: &str) -> GcalcResult<Self> {
-        self.fallable_csv= CSVInvalidBehaviour::from_str(behaviour)?;
+        self.csv_invalid_behaviour= CSVInvalidBehaviour::from_str(behaviour)?;
         Ok(self)
     }
     // </BUILDER>
     
     // <SETTER>
+    #[cfg(feature = "option")]
+    pub fn set_option(&mut self, option: &CalculatorOption) {
+        let option = option.to_owned();
+        self.count = option.count;
+        self.prob_type = option.prob_type;
+        self.prob_precision  = option.prob_precision;
+        self.budget = option.budget;
+        self.csv_invalid_behaviour = option.fallback;
+        self.csv_no_header = option.no_header;
+        self.set_strict_csv(option.strict);
+        self.target_probability = option.target;
+        self.column_map = option.column_map;
+        self.format = option.format;
+        self.csv_ref = option.csv_ref.clone();
+        self.out_option = option.out_option.clone();
+    }
+
     pub fn set_column_map(&mut self, column_map: ColumnMap) {
         self.column_map = column_map;
     }
@@ -191,15 +275,17 @@ impl Calculator {
     }
 
     pub fn set_csv_value_fallback(&mut self, behaviour: &str) -> GcalcResult<()> {
-        self.fallable_csv= CSVInvalidBehaviour::from_str(behaviour)?;
+        self.csv_invalid_behaviour= CSVInvalidBehaviour::from_str(behaviour)?;
         Ok(())
     }
     // </SETTER>
 
     // <PROCESSING>
-    pub fn print_range(&mut self, count: usize,start_index: Option<usize>) -> GcalcResult<()> {
+    pub fn print_range(&mut self, count: Option<usize>, start_index: Option<usize>) -> GcalcResult<()> {
         // Update count for calculation
-        self.count = count;
+        if let Some(count) = count {
+            self.count = count;
+        }
         let records = self.create_records(true)?;
         self.print_records(records, Some((start_index.unwrap_or(0),self.count)))?;
         Ok(())
@@ -366,7 +452,7 @@ impl Calculator {
                     match utils::get_prob_alap(row[self.column_map.probability],None) {
                         Ok(value) => self.state.probability = value,
                         Err(err)  => {
-                            match self.fallable_csv { 
+                            match self.csv_invalid_behaviour { 
                                 CSVInvalidBehaviour::None => return Err(err),                                  // this is error
                                 CSVInvalidBehaviour::Ignore => (),                                             // Do not update value
                                 CSVInvalidBehaviour::Rollback => self.state.probability = self.state.initial_probability,   // Use default value
@@ -380,7 +466,7 @@ impl Calculator {
                     match utils::get_prob_alap(row[self.column_map.constant],None) {
                         Ok(value) => self.state.constant = value,
                         Err(err)  => {
-                            match self.fallable_csv { 
+                            match self.csv_invalid_behaviour { 
                                 CSVInvalidBehaviour::None => return Err(err),                                  // this is error
                                 CSVInvalidBehaviour::Ignore => (),                                             // Do not update value
                                 CSVInvalidBehaviour::Rollback => self.state.constant = self.state.initial_constant,      // Use default value
@@ -394,7 +480,7 @@ impl Calculator {
                     match row[self.column_map.cost].parse::<f32>() {
                         Ok(value) => self.state.cost = value,
                         Err(_) => {
-                            match self.fallable_csv { 
+                            match self.csv_invalid_behaviour { 
                                 CSVInvalidBehaviour::None => {                                                     // this is error
                                     return Err(GcalcError::ParseError(
                                             format!(
@@ -463,7 +549,7 @@ impl Calculator {
         range: Option<(usize, usize)>
     ) -> GcalcResult<()> {
         let formatted = match self.format {
-            TableFormat::Csv => {
+            TableFormat::CSV => {
                 match RecordFormatter::to_raw_csv(records, range) {
                     Ok(csv) => csv,
                     Err(err) => return Err(GcalcError::FormatFail(err)),
@@ -482,7 +568,7 @@ impl Calculator {
 
     fn print_qual_table(&self, count: usize, cost: f32, probability: &str) -> GcalcResult<()> {
         let formatted = match self.format {
-            TableFormat::Csv => {
+            TableFormat::CSV => {
                 QualFormatter::to_csv_table(Qualficiation::new(count, cost, probability))?
             }
             TableFormat::Console => {
@@ -543,9 +629,11 @@ impl CalcState {
     }
 }
 
+#[cfg_attr(feature= "option" ,derive(Serialize, Deserialize))]
+#[derive(Clone,Copy)]
 pub enum TableFormat {
     Console,
-    Csv,
+    CSV,
     GFM,
 }
 
@@ -553,25 +641,9 @@ impl TableFormat {
     pub fn from_str(string : &str) -> GcalcResult<Self> {
         match string.to_lowercase().as_str() {
             "console" => Ok(Self::Console),
-            "csv" => Ok(Self::Csv),
+            "csv" => Ok(Self::CSV),
             "gfm" | "github" => Ok(Self::GFM),
             _ => Err(GcalcError::InvalidConversion(format!("{} is not a valid table format", string))),
         }
     }
 }
-
-pub enum ProbType {
-    Percentage,
-    Float,
-}
-
-impl ProbType {
-    pub fn from_str(string : &str) -> GcalcResult<Self> {
-        match string.to_lowercase().as_str() {
-            "percentage" | "percent" => Ok(Self::Percentage),
-            "float" => Ok(Self::Float),
-            _ => Err(GcalcError::InvalidConversion(format!("{} is not a valid table format", string))),
-        }
-    }
-}
-
