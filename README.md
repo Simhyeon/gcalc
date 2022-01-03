@@ -62,7 +62,7 @@ gcalc = "0.2.0"
 ```bash
 # Print records of probability 0.2(20%) with budget of 100 and cost of 20 for each iteration.
 # Target probability is 0.6
-gcalc cond 0.2 --budget 100 --cost 20 -f console --precision 2 -T percentage -t 0.6
+gcalc cond --probability 0.2 --budget 100 --cost 20 -f console --precision 2 -T percentage -t 0.6
 
 # Print from 0 to 10 as github markdown formatted table, which has a precision of
 # 2 digits. Each try has cost of 1000.
