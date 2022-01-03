@@ -1,30 +1,20 @@
 # TODO
 
-* [ ] Enable qual subcommand to utilize formula when there is no reference file
-* [ ] Make probabilty as an option not an argument so that it can be used as
-option file
-* [ ] Config option support
-	* [ ] Read config
-	* [ ] Create config // Because I want to read option file as serialized struct
-- Because gcalc often comes with too verbose options
-- This comes first and user can override option file with external flags
-for e.g.
-```
-gcalc --option option.json
-===
-% option.json
-{
-	"probabilty" : 0.3,
-	"precision" : 2,
-	"format" : "gfm",
-	"target" : 0.10,
-	"fallable" : true,
-}
-```
+* [x] Update readme.md
 * [ ] Create wasm file
+* [ ] Create website
 * [ ] Use github release api for automated draft
 
 # Implemented
+
+* [x] Rounding with format is somewhat... incoherent
+* [x] Config option support
+	* [x] Read config
+	* [x] Create config // Because I want to read option file as serialized struct
+
+* [x] Enable qual subcommand to utilize formula when there is no reference file
+* [x] Make probability as an option not an argument so that it can be used as
+option file
 
 * [x] Print given range of counts
 * [x] Print until desired percentage

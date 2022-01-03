@@ -2,7 +2,7 @@
 
 Gcalc is a game probability calculator.
 
-Gcalc is not merely a gacha simulator but more of a generic probabilty
+Gcalc is not merely a gacha simulator but more of a generic probability
 calculator.
 
 ## About
@@ -19,9 +19,9 @@ series formula.
 First, simulation is not calculation. The major reasoning of this crate is
 about expectation and calibration, especially game development in mind.
 
-Second, existing calculators only consider fixed value of probabilty. However
-there are plenty of contents that utilize bonus probabilty on specific steps
-and there are some gachas that have different probabilty for different
+Second, existing calculators only consider fixed value of probability. However
+there are plenty of contents that utilize bonus probability on specific steps
+and there are some gachas that have different probability for different
 situations.
 
 Third, those are hard to integrate with other systems. Most of them are either
@@ -84,22 +84,22 @@ gcalc = "0.2.0"
 ## Demo
 
 ```bash
-# Print records of probabilty 0.2(20%) with budget of 100 and cost of 20 for each iteration.
-# Target probabilty is 0.6
+# Print records of probability 0.2(20%) with budget of 100 and cost of 20 for each iteration.
+# Target probability is 0.6
 gcalc cond 0.2 --budget 100 --cost 20 -f console --precision 2 -T percentage -t 0.6
 
 # Print from 0 to 10 as github markdown formatted table, which has a precision of
 # 2 digits. Each try has cost of 1000.
-gcalc range --probabilty 0.2 --count 10 --format gfm --precision 2 --cost 1000
+gcalc range --probability 0.2 --count 10 --format gfm --precision 2 --cost 1000
 
 # Print probability changes illustrated as csv formatted table, which has a
 # precision of 2 digits. Target probability is 0.8.
-gcalc cond --probabilty 0.2 --format csv --precision 2 --target 0.8
+gcalc cond --probability 0.2 --format csv --precision 2 --target 0.8
 
 # Print how many counts are required to reach 0.99 probability with 0.01 change of each try
 # Qual subcommand uses geometric-series formula if no reference was given as an argument
-# Which is efficient for very small probabilty cases
-gcalc qual --probabilty 0.001 -f gfm --target 0.99 --precision 2
+# Which is efficient for very small probability cases
+gcalc qual --probability 0.001 -f gfm --target 0.99 --precision 2
 
 # Use reference file 
 gcalc <SUBCOMMAND> --ref ref.csv
@@ -112,42 +112,45 @@ gcalc range --option option.json
 ```
 
 Results of prior usages are,
-```bash
-# gcalc cond --probabilty 0.2 --budget 100 --cost 20 -f console --precision 2 -T percentage -t 0.6
-+-------+------------+------+
-| count | probabilty | cost |
-+-------+------------+------+
-| 1     | 20.00%     | 0    |
-+-------+------------+------+
-| 2     | 36.00%     | 20   |
-+-------+------------+------+
-| 3     | 48.80%     | 40   |
-+-------+------------+------+
-| 4     | 59.04%     | 60   |
-+-------+------------+------+
-| 5     | 67.23%     | 80   |
-+-------+------------+------+
 
-# gcalc range --probabilty 0.2 --count 10 --format gfm --precision 2 --cost 1000
+```bash
+# gcalc cond --probability 0.2 --budget 100 --cost 20 -f console --precision 2 -T percentage -t 0.6
++-------+-------------+------+
 | count | probability | cost |
-|-------+-------------+------|
-|   1   |    0.20     | 1000 |
-|   2   |    0.36     | 2000 |
-|   3   |    0.49     | 3000 |
-|   4   |    0.59     | 4000 |
-|   5   |    0.67     | 5000 |
-|   6   |    0.74     | 6000 |
-|   7   |    0.79     | 7000 |
-|   8   |    0.83     | 8000 |
++-------+-------------+------+
+|   1   |   20.00%    |  20  |
++-------+-------------+------+
+|   2   |   36.00%    |  40  |
++-------+-------------+------+
+|   3   |   48.80%    |  60  |
++-------+-------------+------+
+|   4   |   59.04%    |  80  |
++-------+-------------+------+
+|   5   |   67.23%    | 100  |
++-------+-------------+------+
+
+# gcalc range --probability 0.2 --count 10 --format gfm --precision 2 --cost 1000
+| count | probability | cost  |
+|-------+-------------+-------|
+|   1   |    0.20     | 1000  |
+|   2   |    0.36     | 2000  |
+|   3   |    0.48     | 3000  |
+|   4   |    0.59     | 4000  |
+|   5   |    0.67     | 5000  |
+|   6   |    0.73     | 6000  |
+|   7   |    0.79     | 7000  |
+|   8   |    0.83     | 8000  |
+|   9   |    0.86     | 9000  |
+|  10   |    0.89     | 10000 |
 
 # gcalc cond --probability 0.2 --format csv --precision 2 --target 0.8
 count,probability,cost
 1,0.20,0.0
 2,0.36,0.0
-3,0.49,0.0
+3,0.48,0.0
 4,0.59,0.0
 5,0.67,0.0
-6,0.74,0.0
+6,0.73,0.0
 7,0.79,0.0
 8,0.83,0.0
 
@@ -159,7 +162,7 @@ count,probability,cost
 
 **Reference file example**
 ```csv
-count,probability,bonus,cost
+count,probability,constant,cost
 1,0.1,0,50
 2,0.2,0,40
 3,0.3,0,30
@@ -191,6 +194,85 @@ count,probability,bonus,cost
 	"out_option": "Console"
 }
 ```
+
+## Advanced usage
+
+**Column mapping**
+
+You can read existing csv file without changing order of original source with
+column option. You can type any character if given colun is not used by gcalc.
+
+Currently, reference csv **requires all count,cost,probability,constant
+columns**. This behaviour might change in the future though.
+
+```bash
+# Example csv content...
+db,type,count,constant,cost,probability
+t1,a,1,0.1,30,0.1
+t1,b,2,0.1,20,0.1
+t1,c,3,0.1,10,0.1
+t1,a,4,0.2,30,0.1
+t1,b,5,0.2,20,0.2
+t1,c,6,0.2,10,0.3
+
+# Example usage
+gcalc --ref ref.csv range --count 6 --column db,type,count,constant,cost,probability
+
+# You can also write as
+gcalc --ref ref.csv range --count 6 --column ,,count,constant,cost,probability
+```
+
+**Strict Read**
+
+Gcalc doesn't match every try for corresponding reference's record by default.
+
+```bash
+# Example csv file
+count,probability,constant,cost
+1,0.5,0,50
+2,0.2,0,40
+3,0.3,0,30
+4,0.4,0,20
+5,0.5,0,10
+
+# Range from 1 to 10
+# From 6th try, 5th record values are used
+gcalc range --count 10 --ref ref.csv 
+```
+
+User can disable this behaviour with strict flag
+
+```bash
+gcalc range --count 10 --ref ref.csv --strict
+
+# Previous command yields error
+Invalid csv error
+= Empty row in index: 6
+```
+
+**Fallback**
+
+Gcalc tries to parse CSV value as intended data type. But user can define
+fallback behaviour for such situations.
+
+```bash
+# Example csv file
+count,probability,constant,cost
+1,0.5,0.2,50
+2,0.2,-,40
+3,0.3,0.1,30
+4,0.4,-,20
+5,0.5,-,10
+
+# Default value is 'none'
+# Option is case insensitive, btw
+gcalc <SUBCOMMAND> --ref ref.csv --constant 0.7 --fallback rollback|ignore|none
+```
+On previous example, at the third record which is ```3,0.3,0.1,30```
+
+- Rollback : Set constant as 0.7 which is an initial value given as argument
+- Ignore   : Set constant as 0.2 which is the last modified value of constant.
+- None     : Panics and abort a program
 
 ## Goal
 
