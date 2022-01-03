@@ -2,7 +2,7 @@ use std::path::Path;
 
 use csv::StringRecordsIntoIter;
 
-use crate::models::{Record, Qualficiation, ColumnMap, CsvRef, OutOption, RecordCursor};
+use crate::models::{Record, Qualficiation, ColumnMap, CsvRef, OutOption, RecordCursor, CSVInvalidBehaviour};
 use crate::{GcalcResult, GcalcError};
 use crate::formatter::{RecordFormatter, QualFormatter};
 use crate::utils;
@@ -17,36 +17,32 @@ pub struct Calculator {
     csv_ref: CsvRef,
     csv_no_header: bool,
     column_map: ColumnMap,
-    fallable_csv: bool,
+    fallable_csv: CSVInvalidBehaviour,
     prob_precision: Option<usize>,
     budget: Option<f32>,
     target_probability : Option<f32>,
     prob_type: ProbType,
     // Which behaviour to take when csv rows ends
-    behaviour: CsvBehaviour,
+    behaviour: CsvRecordBehaviour,
     out_option: OutOption,
 }
 impl Calculator {
     // <BUILDER>
     // Constructor methods
-    pub fn new(start_probability: f32) -> GcalcResult<Self> {
-        if start_probability > 1.0f32 {
-            return Err(GcalcError::InvalidArgument(format!("Given probability of {} which should not be bigger than 1.0", start_probability)));
-        }
-
+    pub fn new() -> GcalcResult<Self> {
         Ok(Self {
-            state : CalcState::new(start_probability),
+            state : CalcState::new(),
             count : 0,
             csv_ref : CsvRef::None,
             csv_no_header: false,
             column_map: ColumnMap::new(COUNT_INDEX, BASIC_PROB_INDEX, ADDED_PROB_INDEX, COST_INDEX),
             format: TableFormat::Csv,
-            fallable_csv: false,
+            fallable_csv: CSVInvalidBehaviour::None,
             prob_precision: None,
             target_probability: None,
             budget: None,
             prob_type: ProbType::Float,
-            behaviour : CsvBehaviour::Repeat,
+            behaviour : CsvRecordBehaviour::Repeat,
             out_option: OutOption::Console,
         })
     }
@@ -61,9 +57,9 @@ impl Calculator {
         self
     }
 
-    pub fn panic_on_invlaid_csv(mut self, tv: bool) -> Self {
-        if tv { self.behaviour = CsvBehaviour::Panic }
-        else { self.behaviour = CsvBehaviour::Repeat }
+    pub fn strict_csv(mut self, tv: bool) -> Self {
+        if tv { self.behaviour = CsvRecordBehaviour::Panic }
+        else { self.behaviour = CsvRecordBehaviour::Repeat }
         self
     }
 
@@ -87,6 +83,20 @@ impl Calculator {
         self
     }
 
+    pub fn probability(mut self, probability: f32) -> GcalcResult<Self> {
+        let probability = utils::get_number_as_fraction(probability)?;
+        self.state.probability = probability;
+        self.state.initial_probability = probability;
+        Ok(self)
+    }
+
+    pub fn constant(mut self, constant: f32) -> GcalcResult<Self> {
+        let constant = utils::get_number_as_fraction(constant)?;
+        self.state.constant = constant;
+        self.state.initial_constant = constant;
+        Ok(self)
+    }
+
     pub fn precision(mut self, precision: usize) -> Self {
         self.prob_precision.replace(precision);
         self
@@ -99,6 +109,7 @@ impl Calculator {
 
     pub fn cost(mut self, cost: f32) -> Self {
         self.state.cost = cost;
+        self.state.initial_cost = cost;
         self
     }
 
@@ -107,9 +118,9 @@ impl Calculator {
         self
     }
 
-    pub fn csv_fallable(mut self, tv: bool) -> Self {
-        self.fallable_csv= tv;
-        self
+    pub fn csv_fallback(mut self, behaviour: &str) -> GcalcResult<Self> {
+        self.fallable_csv= CSVInvalidBehaviour::from_str(behaviour)?;
+        Ok(self)
     }
     // </BUILDER>
     
@@ -122,13 +133,28 @@ impl Calculator {
         self.csv_no_header = tv;
     }
 
-    pub fn set_cost(&mut self, cost: f32) {
-        self.state.cost = cost;
+    pub fn set_probability(&mut self, probability: f32, update_initial_value: bool) -> GcalcResult<()>  {
+        let probability = utils::get_number_as_fraction(probability)?;
+        self.state.probability = probability;
+        if update_initial_value { self.state.initial_probability = probability; }
+        Ok(())
     }
 
-    pub fn set_panic_on_invlaid_csv(&mut self, tv: bool) {
-        if tv { self.behaviour = CsvBehaviour::Panic }
-        else { self.behaviour = CsvBehaviour::Repeat }
+    pub fn set_cost(&mut self, cost: f32, update_initial_value: bool) {
+        self.state.cost = cost;
+        if update_initial_value { self.state.initial_cost = cost; }
+    }
+
+    pub fn set_constant(&mut self, constant: f32, update_initial_value: bool) -> GcalcResult<()> {
+        let constant = utils::get_number_as_fraction(constant)?;
+        self.state.constant = constant;
+        if update_initial_value { self.state.initial_constant = constant; }
+        Ok(())
+    }
+
+    pub fn set_strict_csv(&mut self, tv: bool) {
+        if tv { self.behaviour = CsvRecordBehaviour::Panic }
+        else { self.behaviour = CsvRecordBehaviour::Repeat }
     }
 
     pub fn set_target_probability(&mut self, target_probability: f32) -> GcalcResult<()> {
@@ -164,8 +190,9 @@ impl Calculator {
         self.out_option = OutOption::File(path.to_owned());
     }
 
-    pub fn set_csv_fallable(&mut self, tv: bool) {
-        self.fallable_csv= tv;
+    pub fn set_csv_value_fallback(&mut self, behaviour: &str) -> GcalcResult<()> {
+        self.fallable_csv= CSVInvalidBehaviour::from_str(behaviour)?;
+        Ok(())
     }
     // </SETTER>
 
@@ -193,14 +220,14 @@ impl Calculator {
         // Simply calculate geometric series
         if let CsvRef::None = self.csv_ref {
 
-            if self.state.probability == 1.0 {
+            if self.state.probability >= 1.0 {
                 total_count = 1;
                 total_cost = self.state.cost;
                 final_probability = utils::get_prob_as_formatted(1.0f32, &self.prob_type, &self.prob_precision);
             } 
             // Probability and possibly with budget
             else if let Some(target) = self.target_probability {
-                let count = utils::geometric_series_qual(self.state.probability, target);
+                let count = utils::geometric_series_qual(self.state.probability + self.state.constant, target);
                 let count = if let Some(bud) = self.budget  {
                     if count as f32 * self.state.cost > bud {
                         (bud / self.state.cost).floor() as usize
@@ -209,7 +236,7 @@ impl Calculator {
                 total_count = count;
                 total_cost = count as f32 * self.state.cost; 
                 final_probability = utils::get_prob_as_formatted(
-                    utils::geometric_series(total_count, self.state.probability), 
+                    utils::geometric_series(total_count, self.state.probability + self.state.constant), 
                     &self.prob_type, 
                     &self.prob_precision
                 );
@@ -222,7 +249,7 @@ impl Calculator {
                 total_count = count;
                 total_cost = count as f32 * self.state.cost;
                 final_probability = utils::get_prob_as_formatted(
-                    utils::geometric_series(total_count, self.state.probability), 
+                    utils::geometric_series(total_count, self.state.probability + self.state.constant), 
                     &self.prob_type, 
                     &self.prob_precision
                 );
@@ -338,15 +365,27 @@ impl Calculator {
                 if row.len() > self.column_map.probability {
                     match utils::get_prob_alap(row[self.column_map.probability],None) {
                         Ok(value) => self.state.probability = value,
-                        Err(err)  => if !self.fallable_csv { return Err(err); }
+                        Err(err)  => {
+                            match self.fallable_csv { 
+                                CSVInvalidBehaviour::None => return Err(err),                                  // this is error
+                                CSVInvalidBehaviour::Ignore => (),                                             // Do not update value
+                                CSVInvalidBehaviour::Rollback => self.state.probability = self.state.initial_probability,   // Use default value
+                            }
+                        }
                     }
                 }
 
-                // Get added(bonus) probability
-                if row.len() > self.column_map.added {
-                    match utils::get_prob_alap(row[self.column_map.added],None) {
+                // Get constant probability
+                if row.len() > self.column_map.constant {
+                    match utils::get_prob_alap(row[self.column_map.constant],None) {
                         Ok(value) => self.state.constant = value,
-                        Err(err)  => if !self.fallable_csv { return Err(err); }
+                        Err(err)  => {
+                            match self.fallable_csv { 
+                                CSVInvalidBehaviour::None => return Err(err),                                  // this is error
+                                CSVInvalidBehaviour::Ignore => (),                                             // Do not update value
+                                CSVInvalidBehaviour::Rollback => self.state.constant = self.state.initial_constant,      // Use default value
+                            }
+                        }
                     }
                 }
 
@@ -354,8 +393,19 @@ impl Calculator {
                 if row.len() > self.column_map.cost {
                     match row[self.column_map.cost].parse::<f32>() {
                         Ok(value) => self.state.cost = value,
-                        Err(_)  => if !self.fallable_csv { 
-                            return Err(GcalcError::ParseError(format!("Cost should be a number, but the value in ({},{}) is not", index + 1, self.column_map.cost)));
+                        Err(_) => {
+                            match self.fallable_csv { 
+                                CSVInvalidBehaviour::None => {                                                     // this is error
+                                    return Err(GcalcError::ParseError(
+                                            format!(
+                                                "Cost should be a number, but the value in ({},{}) is not", 
+                                                index + 1, 
+                                                self.column_map.cost
+                                            )))
+                                },                                                     
+                                CSVInvalidBehaviour::Ignore => (),                                                 // Do not update value
+                                CSVInvalidBehaviour::Rollback => self.state.cost = self.state.initial_cost,      // Use default value
+                            }
                         }
                     }
 
@@ -363,8 +413,8 @@ impl Calculator {
             } // End some match
             None => { // Record not found 
                 match self.behaviour {
-                    CsvBehaviour::Repeat => (), // Do nothing & respect previous value,
-                    CsvBehaviour::Panic => {
+                    CsvRecordBehaviour::Repeat => (), // Do nothing & respect previous value,
+                    CsvRecordBehaviour::Panic => {
                         return Err(GcalcError::CsvError(format!("Empty row in index: {}", index))); 
                     }
                 }
@@ -461,7 +511,7 @@ impl Calculator {
     // </INTERNAL>
 }
 
-enum CsvBehaviour {
+enum CsvRecordBehaviour {
     Repeat,
     Panic,
     // Possibly early return
@@ -469,18 +519,24 @@ enum CsvBehaviour {
 
 struct CalcState {
     pub probability: f32,
+    pub initial_probability: f32,
     pub constant: f32,
+    pub initial_constant: f32,
     pub cost: f32,
+    pub initial_cost: f32,
     pub success_until: f32,
     pub fail_until: f32,
 }
 
 impl CalcState {
-    pub fn new(probability: f32) -> Self {
+    pub fn new() -> Self {
         Self {
-            probability,
+            probability : 1.0,
+            initial_probability: 1.0,
             constant: 0.0,
+            initial_constant: 0.0,
             cost: 0.0,
+            initial_cost: 0.0,
             success_until: 0.0,
             fail_until: 1.0,
         }
