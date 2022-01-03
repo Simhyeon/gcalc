@@ -23,13 +23,15 @@ impl ColumnMap {
 pub(crate) struct Qualficiation {
     pub count: usize,
     pub cost : f32,
+    pub probability: String,
 }
 
 impl Qualficiation {
-    pub fn new(count: usize, cost: f32) -> Self {
+    pub fn new(count: usize, cost: f32, probability: &str) -> Self {
         Self {
             count,
             cost,
+            probability: probability.to_owned(),
         }
     }
 }
@@ -52,7 +54,7 @@ impl Record {
 }
 
 #[derive(PartialEq)]
-pub enum RefCsv {
+pub enum CsvRef {
     Raw(String),
     File(PathBuf),
     None,
