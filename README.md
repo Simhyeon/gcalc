@@ -29,30 +29,43 @@ simple programs with integrated front end (GUI) which can be only losely
 connected to other game development tools at the most and automation is
 nearly impossible.
 
-## Demo
+## Usage
 
 ```bash
-# Print records of probabilty 0.2(20%) with budget of 100 and cost of 20 for each iteration.
-# Target probabilty is 0.6
-gcalc cond 0.2 --budget 100 --cost 20 -f console -p 2 -T percentage -t 0.6
-```
-which prints a table with the help from
-[tabled](https://crates.io/crates/tabled) crate.
-```
-+-------+------------+------+
-| count | probabilty | cost |
-+-------+------------+------+
-| 1     | 20.00%     | 0    |
-+-------+------------+------+
-| 2     | 36.00%     | 20   |
-+-------+------------+------+
-| 3     | 48.80%     | 40   |
-+-------+------------+------+
-| 4     | 59.04%     | 60   |
-+-------+------------+------+
-| 5     | 67.23%     | 80   |
-+-------+------------+------+
+# Basic
+gcalc <SUBCOMMAND> <OPTIONS>
 
+# SUBCOMMANDS:
+#   cond         Conditional calculation
+#   qual         Conditional calculation but only prints result
+#   range        Prints range of calculations
+#   reference    Create a reference file
+#   option       Create an option file
+
+# For cond and qual
+-b, --budget <budget>          Budget of total cost
+-C, --cost <cost>              Cost per try
+
+# For range
+-c, --count <count>            Counts to execute
+-S, --start <start>            Starting index to print
+
+# Global option
+    --constant <constant>      Constant value to be added into probability
+-f, --format <format>          Table format(csv|console|gfm)
+    --fallback <fallback>      Set csv value fallback {rollback|ignore|none} [default: none]
+-h, --help                     Print help information
+-l, --column <column>          Column mapping
+    --noheader                 CSV without header
+-o, --out <FILE>               File to write output
+-O, --option <option>          Option file to use
+-p, --probability <prob>       Basic probability
+-P, --precision <precision>    Precision
+-r, --ref <reference>          Reference file
+    --refin                    Reference from stdin
+-s, --strict                   Set strict CSV reader mode, every try should be corresponding csv record.
+-t, --target <target>          Target probability to achieve
+-T, --type <probtype>          Probability type(percentage|fraction)
 ```
 
 ## Install
@@ -68,17 +81,12 @@ cargo install gcalc --features binary --locked
 gcalc = "0.2.0"
 ```
 
-## Usage
+## Demo
 
 ```bash
-# Basic
-gcalc <SUBCOMMAND>
-
-# SUBCOMMANDS:
-#   cond         Conditional calculation
-#   qual         Conditional calculation but only prints result
-#   range        Prints range of calculations
-#   reference    Create reference file
+# Print records of probabilty 0.2(20%) with budget of 100 and cost of 20 for each iteration.
+# Target probabilty is 0.6
+gcalc cond 0.2 --budget 100 --cost 20 -f console --precision 2 -T percentage -t 0.6
 
 # Print from 0 to 10 as github markdown formatted table, which has a precision of
 # 2 digits. Each try has cost of 1000.
@@ -92,10 +100,34 @@ gcalc cond --probabilty 0.2 --format csv --precision 2 --target 0.8
 # Qual subcommand uses geometric-series formula if no reference was given as an argument
 # Which is efficient for very small probabilty cases
 gcalc qual --probabilty 0.001 -f gfm --target 0.99 --precision 2
+
+# Use reference file 
+gcalc <SUBCOMMAND> --ref ref.csv
+
+# Use reference from stdin
+cat ref.csv | gcalc <SUBCOMMAND> --refin
+
+# Read options from option file
+gcalc range --option option.json
 ```
 
 Results of prior usages are,
 ```bash
+# gcalc cond --probabilty 0.2 --budget 100 --cost 20 -f console --precision 2 -T percentage -t 0.6
++-------+------------+------+
+| count | probabilty | cost |
++-------+------------+------+
+| 1     | 20.00%     | 0    |
++-------+------------+------+
+| 2     | 36.00%     | 20   |
++-------+------------+------+
+| 3     | 48.80%     | 40   |
++-------+------------+------+
+| 4     | 59.04%     | 60   |
++-------+------------+------+
+| 5     | 67.23%     | 80   |
++-------+------------+------+
+
 # gcalc range --probabilty 0.2 --count 10 --format gfm --precision 2 --cost 1000
 | count | probability | cost |
 |-------+-------------+------|
@@ -123,6 +155,41 @@ count,probability,cost
 | count | probability | cost |
 |-------+-------------+------|
 | 4602  |    0.99     |  0   |
+```
+
+**Reference file example**
+```csv
+count,probability,bonus,cost
+1,0.1,0,50
+2,0.2,0,40
+3,0.3,0,30
+4,0.4,0,20
+5,0.5,0,10
+```
+
+**option file example**
+```json
+{
+	"count": 10,
+	"prob_type": "Percentage",
+	"prob_precision": 2,
+	"budget": null,
+	"fallback": "None",
+	"no_header": false,
+	"strict": false,
+	"target": null,
+	"column_map": {
+		"count": 0,
+		"probability": 1,
+		"constant": 2,
+		"cost": 3
+	},
+	"format": "GFM",
+	"csv_ref": {
+		"File": "ref.csv"
+	},
+	"out_option": "Console"
+}
 ```
 
 ## Goal
