@@ -5,30 +5,6 @@ Gcalc is a game probability calculator.
 Gcalc is not merely a gacha simulator but more of a generic probability
 calculator.
 
-## About
-
-### Why not use a simple formula?
-
-Well because, real life usages are not clear cut demonstrated geometric
-sequences. Sometimes there is bonus for a specific gacha stage and there is
-also a so-called confirmed gacha system, which makes it hard to use geometric
-series formula. 
-
-### Ok, why not use other gacha simulators or calculators?
-
-First, simulation is not calculation. The major reasoning of this crate is
-about expectation and calibration, especially game development in mind.
-
-Second, existing calculators only consider fixed value of probability. However
-there are plenty of contents that utilize bonus probability on specific steps
-and there are some gachas that have different probability for different
-situations.
-
-Third, those are hard to integrate with other systems. Most of them are either
-simple programs with integrated front end (GUI) which can be only losely
-connected to other game development tools at the most and automation is
-nearly impossible.
-
 ## Usage
 
 ```bash
@@ -171,6 +147,7 @@ count,probability,constant,cost
 ```
 
 **option file example**
+
 ```json
 {
 	"count": 10,
@@ -194,6 +171,23 @@ count,probability,constant,cost
 	"out_option": "Console"
 }
 ```
+"csv\_ref" is a tuple which has variant of...
+```
+"csv_ref" : {
+	"Raw" : "count,probability,constant,cost
+1,0.1,0.0,10"
+}
+
+or
+
+"csv_ref" : {
+	"File": "file_name_in_string"
+}
+
+or
+
+"csv_ref" : "None",
+```
 
 ## Advanced usage
 
@@ -204,6 +198,13 @@ column option. You can type any character if given colun is not used by gcalc.
 
 Currently, reference csv **requires all count,cost,probability,constant
 columns**. This behaviour might change in the future though.
+
+Default order of columns are
+
+- count
+- probability
+- constant
+- cost
 
 ```bash
 # Example csv content...
@@ -271,8 +272,33 @@ gcalc <SUBCOMMAND> --ref ref.csv --constant 0.7 --fallback rollback|ignore|none
 On previous example, at the third record which is ```3,0.3,0.1,30```
 
 - Rollback : Set constant as 0.7 which is an initial value given as argument
-- Ignore   : Set constant as 0.2 which is the last modified value of constant.
+- Ignore   : Set constant as 0.2 which is the updated value of constant.
 - None     : Panics and abort a program
+
+## About
+
+### Why not use a simple formula?
+
+Well because, real life usages are not clear cut demonstrated geometric
+sequences. Sometimes there is bonus for a specific gacha stage and there is
+also a so-called confirmed gacha system, which makes it hard to use geometric
+series formula. 
+
+### Ok, why not use other gacha simulators or calculators?
+
+First, simulation is not calculation. The major reasoning of this crate is
+about expectation and calibration, especially game development in mind.
+
+Second, existing calculators only consider fixed value of probability. However
+there are plenty of contents that utilize bonus probability on specific steps
+and there are some gachas that have different probability for different
+situations.
+
+Third, those are hard to integrate with other systems. Most of them are either
+simple programs with integrated front end (GUI) which can be only losely
+connected to other game development tools at the most and automation is
+nearly impossible.
+
 
 ## Goal
 
