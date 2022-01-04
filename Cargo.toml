@@ -3,8 +3,8 @@ name = "gcalc"
 version = "0.2.0"
 edition = "2018"
 license = "MIT OR Apache-2.0"
-keywords = ["cli"]
-categories = ["command-line-utilities"]
+keywords = ["cli", "game-development"]
+categories = ["command-line-utilities", "game-development"]
 description = "Game probability calculator"
 homepage = "https://github.com/simhyeon/gcalc"
 repository = "https://github.com/simhyeon/gcalc"
@@ -20,7 +20,7 @@ crate-type = [ "cdylib", "rlib" ]
 path = "src/lib.rs"
 
 [features]
-wasm = [ "wasm-bindgen", "option" ]
+wasm = [ "wasm-bindgen", "option", "wee_alloc" ]
 binary = ["clap", "option", "tabled"]
 option = ["serde_json"]
 
@@ -32,3 +32,11 @@ serde = { version = "1.0.126", features = ["derive"]}
 serde_json = { version = "1.0.59", optional = true }
 tabled = { version = "0.3.0", optional = true }
 wasm-bindgen = { version = "0.2.74", optional = true}
+wee_alloc = { version = "0.4.5", optional = true }
+
+# Wasm-pack doesn't support custom profile at the moment
+# Use it manually or edit whenever you want to build wasm file
+[profile.wasm]
+inherits = "release"
+lto = true
+opt-level = "s"
