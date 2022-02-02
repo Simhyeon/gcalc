@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use serde::Serialize;
 #[cfg(feature = "option")]
 use serde::Deserialize;
+#[cfg(feature = "tabled")]
 use tabled::Tabled;
 use crate::GcalcError;
 
@@ -33,7 +34,8 @@ impl ColumnMap {
     }
 }
 
-#[derive(Serialize, Tabled)]
+#[cfg_attr(feature= "tabled" ,derive(Tabled))]
+#[derive(Serialize)]
 pub(crate) struct Qualficiation {
     pub count: usize,
     pub probability: String,
@@ -50,7 +52,8 @@ impl Qualficiation {
     }
 }
 
-#[derive(Serialize, Tabled)]
+#[cfg_attr(feature= "tabled" ,derive(Tabled))]
+#[derive(Serialize)]
 pub(crate) struct Record {
     pub count: usize,
     pub probability : String,

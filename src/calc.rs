@@ -7,6 +7,8 @@ use crate::{GcalcResult, GcalcError};
 use crate::formatter::{RecordFormatter, QualFormatter};
 use crate::utils;
 use crate::consts::*;
+#[cfg(feature = "tabled")]
+use tabled;
 #[cfg(feature = "option")]
 use serde::{Serialize, Deserialize};
 
@@ -555,9 +557,11 @@ impl Calculator {
                     Err(err) => return Err(GcalcError::FormatFail(err)),
                 }
             }
+            #[cfg(feature = "tabled")]
             TableFormat::Console => {
                 RecordFormatter::to_styled_table(records, range, tabled::Style::default())
             }
+            #[cfg(feature = "tabled")]
             TableFormat::GFM => {
                 RecordFormatter::to_styled_table(records, range, tabled::Style::github_markdown())
             }
@@ -571,9 +575,11 @@ impl Calculator {
             TableFormat::CSV => {
                 QualFormatter::to_csv_table(Qualficiation::new(count, cost, probability))?
             }
+            #[cfg(feature = "tabled")]
             TableFormat::Console => {
                 QualFormatter::to_styled_table(Qualficiation::new(count, cost, probability), tabled::Style::default())
             }
+            #[cfg(feature = "tabled")]
             TableFormat::GFM => {
                 QualFormatter::to_styled_table(Qualficiation::new(count, cost, probability), tabled::Style::github_markdown())
             }
@@ -632,17 +638,21 @@ impl CalcState {
 #[cfg_attr(feature= "option" ,derive(Serialize, Deserialize))]
 #[derive(Clone,Copy)]
 pub enum TableFormat {
-    Console,
     CSV,
+    #[cfg(feature = "tabled")]
     GFM,
+    #[cfg(feature = "tabled")]
+    Console,
 }
 
 impl TableFormat {
     pub fn from_str(string : &str) -> GcalcResult<Self> {
         match string.to_lowercase().as_str() {
+            #[cfg(feature = "tabled")]
             "console" => Ok(Self::Console),
-            "csv" => Ok(Self::CSV),
+            #[cfg(feature = "tabled")]
             "gfm" | "github" => Ok(Self::GFM),
+            "csv" => Ok(Self::CSV),
             _ => Err(GcalcError::InvalidConversion(format!("{} is not a valid table format", string))),
         }
     }
