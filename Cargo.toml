@@ -19,7 +19,7 @@ name = "gcalc"
 path = "src/lib.rs"
 
 [features]
-binary = ["clap", "option"]
+binary = ["clap", "option", "tabled"]
 option = ["serde_json"]
 
 [dependencies]
