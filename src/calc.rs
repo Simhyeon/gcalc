@@ -65,6 +65,7 @@ impl CalculatorOption {
 pub struct Calculator {
     state: CalcState,
     count: usize,
+    offset: Option<usize>,
     format: TableFormat,
     csv_ref: CsvRef,
     csv_no_header: bool,
@@ -85,6 +86,7 @@ impl Calculator {
         Ok(Self {
             state : CalcState::new(),
             count : 0,
+            offset: None,
             csv_ref : CsvRef::None,
             csv_no_header: false,
             column_map: ColumnMap::new(COUNT_INDEX, BASIC_PROB_INDEX, ADDED_PROB_INDEX, COST_INDEX),
@@ -256,6 +258,10 @@ impl Calculator {
         self.budget.replace(budget);
     }
 
+    pub fn set_offset(&mut self, offset: usize) {
+        self.offset.replace(offset);
+    }
+
     pub fn set_table_format(&mut self, format: TableFormat) {
         self.format = format;
     }
@@ -425,6 +431,39 @@ impl Calculator {
             // When using range variant,
             // break when loop reached max count
             if use_range && record_index >= self.count { break; }
+        }
+
+        // Add more records if offset is given
+        if let Some(mut offset) = self.offset {
+            // This is a non dry code from previous loop
+            while offset >= 0 {
+                cursor = RecordCursor::Next;
+
+                // Only if csv value is not empty, update the state from csv value(file)
+                if !csv_value.is_empty() { self.update_state_from_csv_file(&mut csv_record, csv_index, &mut cursor)?; }
+                self.calculate_fail_success()?;
+
+                let prob_str = utils::get_prob_as_formatted(
+                    self.state.success_until,
+                    &self.prob_type,
+                    &self.prob_precision
+                );
+
+                total_cost = total_cost + self.state.cost;
+                records.push(Record::new(record_index + 1,prob_str.to_owned(), total_cost));
+
+                // If and only if cursor is next,
+                // increase csv index
+                if let RecordCursor::Next = cursor {
+                    csv_index += 1;
+                }
+
+                // Increases record index 
+                // regardless of csv_index
+                record_index += 1;
+
+                if offset == 0 { break } else { offset -= 1; }
+            }
         }
 
         Ok(records)

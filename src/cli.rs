@@ -25,6 +25,7 @@ impl Cli {
             .subcommand(cond_app
                 .arg(Arg::new("budget").help("Budget of total cost").short('b').long("budget").takes_value(true))
                 .arg(Arg::new("target").help("Target probability").short('t').long("target").takes_value(true))
+                .arg(Arg::new("offset").help("Record offset").long("offset").takes_value(true))
             ).subcommand(qual_app
                 .arg(Arg::new("budget").help("Budget of total cost").short('b').long("budget").takes_value(true))
                 .arg(Arg::new("target").help("Target probability").short('t').long("target").takes_value(true))
@@ -117,6 +118,11 @@ impl Cli {
             cal.set_budget(budget);
         }
 
+        if let Some(offset) = args.value_of("offset") {
+            let offset = offset.parse().map_err( |_| GcalcError::ParseError("Budget should be a number".to_owned()))?;
+            cal.set_offset(offset);
+        }
+
         cal.print_conditional()?;
         Ok(())
     }
@@ -143,7 +149,7 @@ impl Cli {
         #[cfg(feature = "option")]
         if let Some(file) = args.value_of("option") {
             let option =  CalculatorOption::from_file(std::path::Path::new(file))?;
-            cal.set_option(&option)?;
+            cal.set_option(&option);
         }
 
         if let Some(prob) = args.value_of("prob") {
