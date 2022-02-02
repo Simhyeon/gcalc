@@ -26,12 +26,14 @@ impl Cli {
                 .arg(Arg::new("budget").help("Budget of total cost").short('b').long("budget").takes_value(true))
                 .arg(Arg::new("target").help("Target probability").short('t').long("target").takes_value(true))
                 .arg(Arg::new("offset").help("Record offset").long("offset").takes_value(true))
+                .arg(Arg::new("plot").help("Crate plot chart").long("plot"))
             ).subcommand(qual_app
                 .arg(Arg::new("budget").help("Budget of total cost").short('b').long("budget").takes_value(true))
                 .arg(Arg::new("target").help("Target probability").short('t').long("target").takes_value(true))
             ).subcommand(range_app 
                 .arg(Arg::new("count").help("Counts to execute").short('c').long("count").takes_value(true))
                 .arg(Arg::new("start").help("Starting index to print").short('S').long("start").takes_value(true))
+                .arg(Arg::new("plot").help("Crate plot chart").long("plot"))
             ).subcommand(App::new("reference").about("Create a reference file"));
 
             #[cfg(feature = "option")]
@@ -99,7 +101,12 @@ impl Cli {
         }
         Self::set_calculator_attribute(&mut cal, args)?;
 
-        cal.print_range(count, Some(min))?;
+        cal.print_range(
+            count, 
+            Some(min),
+            #[cfg(feature = "plotters")]
+            args.is_present("plot")
+        )?;
 
         Ok(())
     }
@@ -123,7 +130,10 @@ impl Cli {
             cal.set_offset(offset);
         }
 
-        cal.print_conditional()?;
+        cal.print_conditional(
+            #[cfg(feature = "plotters")]
+            args.is_present("plot")
+        )?;
         Ok(())
     }
 

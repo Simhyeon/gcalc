@@ -3,6 +3,8 @@ use std::path::Path;
 use csv::StringRecordsIntoIter;
 
 use crate::models::{Record, Qualficiation, ColumnMap, CsvRef, OutOption, RecordCursor, CSVInvalidBehaviour, ProbType};
+#[cfg(feature = "plotters")]
+use crate::plot::{PlotAttribute, Renderer, PlotType};
 use crate::{GcalcResult, GcalcError};
 use crate::formatter::{RecordFormatter, QualFormatter};
 use crate::utils;
@@ -289,19 +291,55 @@ impl Calculator {
     // </SETTER>
 
     // <PROCESSING>
-    pub fn print_range(&mut self, count: Option<usize>, start_index: Option<usize>) -> GcalcResult<()> {
+    pub fn print_range(
+        &mut self,
+        count: Option<usize>,
+        start_index: Option<usize>,
+        #[cfg(feature = "plotters")]
+        plot: bool
+    ) -> GcalcResult<()> {
         // Update count for calculation
         if let Some(count) = count {
             self.count = count;
         }
         let records = self.create_records(true)?;
-        self.print_records(records, Some((start_index.unwrap_or(0),self.count)))?;
+        self.print_records(&records, Some((start_index.unwrap_or(0),self.count)))?;
+        #[cfg(feature = "plotters")]
+        if plot {
+            let attr = PlotAttribute { 
+                plot_type: PlotType::Line, 
+                cost_type: PlotType::Bar,
+                caption: "demo".to_owned(),
+                x_label: "prob".to_owned(),
+                y_label: "rows".to_owned(),
+                label_style: (String::new(), 12),
+                img_size: (600,600)
+            };
+            Renderer::draw_chart(attr, &records, &self.prob_type)?;
+        }
         Ok(())
     }
 
-    pub fn print_conditional(&mut self) -> GcalcResult<()> {
+    pub fn print_conditional(
+        &mut self,
+        #[cfg(feature = "plotters")]
+        plot: bool
+    ) -> GcalcResult<()> {
         let records = self.create_records(false)?;
-        self.print_records(records, None)?;
+        self.print_records(&records, None)?;
+        #[cfg(feature = "plotters")]
+        if plot {
+            let attr = PlotAttribute { 
+                plot_type: PlotType::Line, 
+                cost_type: PlotType::Bar,
+                caption: "demo".to_owned(),
+                x_label: "prob".to_owned(),
+                y_label: "rows".to_owned(),
+                label_style: (String::new(), 12),
+                img_size: (600,600)
+            };
+            Renderer::draw_chart(attr, &records, &self.prob_type)?;
+        }
         Ok(())
     }
 
@@ -436,7 +474,8 @@ impl Calculator {
         // Add more records if offset is given
         if let Some(mut offset) = self.offset {
             // This is a non dry code from previous loop
-            while offset >= 0 {
+            record_index += 1;
+            while offset > 0 {
                 cursor = RecordCursor::Next;
 
                 // Only if csv value is not empty, update the state from csv value(file)
@@ -586,7 +625,7 @@ impl Calculator {
 
     fn print_records(
         &self,
-        records :Vec<Record>,
+        records :&Vec<Record>,
         range: Option<(usize, usize)>
     ) -> GcalcResult<()> {
         let formatted = match self.format {

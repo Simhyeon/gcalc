@@ -31,7 +31,7 @@ pub(crate) struct RecordFormatter;
 
 impl RecordFormatter {
     pub fn to_raw_csv (
-        values :Vec<Record>,
+        values :&Vec<Record>,
         range: Option<(usize,usize)>
     ) -> Result<String, Box<dyn Error>> {
         let mut wtr = WriterBuilder::new().from_writer(vec![]);
@@ -54,7 +54,7 @@ impl RecordFormatter {
 
     #[cfg(feature = "tabled")]
     pub fn to_styled_table(
-        values : Vec<Record>,
+        values : &Vec<Record>,
         range: Option<(usize,usize)>,
         style: Style
     ) -> String {
