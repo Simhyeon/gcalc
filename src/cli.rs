@@ -143,7 +143,7 @@ impl Cli {
         #[cfg(feature = "option")]
         if let Some(file) = args.value_of("option") {
             let option =  CalculatorOption::from_file(std::path::Path::new(file))?;
-            cal.set_option(&option);
+            cal.set_option(&option)?;
         }
 
         if let Some(prob) = args.value_of("prob") {

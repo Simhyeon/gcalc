@@ -28,4 +28,14 @@ csv = "1.1.6"
 thiserror = "1.0.25"
 serde = { version = "1.0.126", features = ["derive"]}
 serde_json = { version = "1.0.59", optional = true }
-tabled = "0.3.0"
+tabled = { version = "0.3.0", optional = true }
+wasm-bindgen = { version = "0.2.74", optional = true}
+wee_alloc = { version = "0.4.5", optional = true }
+plotters = { version = "0.3.1", optional = true}
+
+# Wasm-pack doesn't support custom profile at the moment
+# Use it manually or edit whenever you want to build wasm file
+[profile.wasm]
+inherits = "release"
+lto = true
+opt-level = "s"

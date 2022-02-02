@@ -27,6 +27,9 @@ pub enum GcalcError {
     ParseError(String),
     #[error("Unknown error \n= {0}")]
     Unknown(String),
+    #[cfg(feature = "plotters")]
+    #[error("Failed to create plot image \n= {0}")]
+    PlotError(String),
 }
 
 impl From<std::io::Error> for GcalcError {
