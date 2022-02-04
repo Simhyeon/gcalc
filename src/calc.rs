@@ -1,11 +1,10 @@
 use std::path::Path;
 
-#[cfg(feature = "csv")]
 use csv::StringRecordsIntoIter;
 
 use crate::models::{Record, Qualficiation, ColumnMap, CsvRef, OutOption, RecordCursor, CSVInvalidBehaviour, ProbType};
 #[cfg(feature = "plotters")]
-use crate::plot::{PlotAttribute, Renderer, PlotType};
+use crate::plot::{PlotAttribute, Renderer};
 use crate::{GcalcResult, GcalcError};
 use crate::formatter::{RecordFormatter, QualFormatter};
 use crate::utils;

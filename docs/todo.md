@@ -1,16 +1,18 @@
 # TODO
 
-* [ ] Add offset for conditional operation
+* [x] Add offset for conditional operation
 * [x] Create wasm file
 	* [x] Weealloc integration
 	* [x] Pushed as npm package
 * [x] Update readme.md
-* [ ] Use cindex instead of csv crate
 * [ ] Plotters integration
-	* [ ] Multi y column plot img (left as probability, right as cost)
-	* [ ] Re-use records struct if possible, but currently you can't because prob is string
-	- Port prob value something into a enum variant which implments to\_string 
-	* [ ] Plot object model for easier plot confiruation
+	* [x] Multi y column plot img (left as probability, right as cost)
+	* [x] ~~Re-use records struct if possible, but currently you can't because prob is string~~
+	- I Simply made extract prob function
+	* [x] Plot object model for easier plot confiruation
+	* [x] Fix index problems
+	* [ ] Make cli option for configuration
+
 * [ ] Make crate compatible with docs.rs
 * [ ] Probe if library usage is ergonmic enough
 * [ ] Create website
