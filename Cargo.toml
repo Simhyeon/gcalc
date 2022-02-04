@@ -1,6 +1,6 @@
 [package]
 name = "gcalc"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2018"
 license = "MIT OR Apache-2.0"
 keywords = ["cli"]
@@ -19,7 +19,7 @@ name = "gcalc"
 path = "src/lib.rs"
 
 [features]
-binary = ["clap", "option", "tabled"]
+binary = ["clap", "option", "tabled", "plotters"]
 option = ["serde_json"]
 
 [dependencies]
