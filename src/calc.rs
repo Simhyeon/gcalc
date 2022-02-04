@@ -1,5 +1,6 @@
 use std::path::Path;
 
+#[cfg(feature = "csv")]
 use csv::StringRecordsIntoIter;
 
 use crate::models::{Record, Qualficiation, ColumnMap, CsvRef, OutOption, RecordCursor, CSVInvalidBehaviour, ProbType};
@@ -306,16 +307,7 @@ impl Calculator {
         self.print_records(&records, Some((start_index.unwrap_or(0),self.count)))?;
         #[cfg(feature = "plotters")]
         if plot {
-            let attr = PlotAttribute { 
-                plot_type: PlotType::Line, 
-                cost_type: PlotType::Bar,
-                caption: "demo".to_owned(),
-                x_label: "prob".to_owned(),
-                y_label: "rows".to_owned(),
-                label_style: (String::new(), 12),
-                img_size: (600,600)
-            };
-            Renderer::draw_chart(attr, &records, &self.prob_type)?;
+            Renderer::draw_chart(PlotAttribute::default(), &records, &self.prob_type)?;
         }
         Ok(())
     }
@@ -329,16 +321,7 @@ impl Calculator {
         self.print_records(&records, None)?;
         #[cfg(feature = "plotters")]
         if plot {
-            let attr = PlotAttribute { 
-                plot_type: PlotType::Line, 
-                cost_type: PlotType::Bar,
-                caption: "demo".to_owned(),
-                x_label: "prob".to_owned(),
-                y_label: "rows".to_owned(),
-                label_style: (String::new(), 12),
-                img_size: (600,600)
-            };
-            Renderer::draw_chart(attr, &records, &self.prob_type)?;
+            Renderer::draw_chart(PlotAttribute::default(), &records, &self.prob_type)?;
         }
         Ok(())
     }
