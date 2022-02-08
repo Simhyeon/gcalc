@@ -31,7 +31,7 @@ tabled = { version = "0.3.0", optional = true }
 wasm-bindgen = { version = "0.2.74", optional = true}
 wee_alloc = { version = "0.4.5", optional = true }
 plotters = { version = "0.3.1", optional = true, default-features = false, features = ["svg_backend", "all_series"]}
-cindex = { git="https://github.com/simhyeon/cindex", version = "0.3.3", default-features = false}
+cindex = { version = "0.3.3", default-features = false}
 
 # Wasm-pack doesn't support custom profile at the moment
 # Use it manually or edit whenever you want to build wasm file

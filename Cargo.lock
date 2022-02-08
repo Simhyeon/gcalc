@@ -44,7 +44,8 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 [[package]]
 name = "cindex"
 version = "0.3.3"
-source = "git+https://github.com/simhyeon/cindex#c5f88fcf883d1000722ebd3b9403d7389a878e3b"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bfc22ccc6cf34486236fd5e2fbab5ffa3e8a050d26a33701793fc4e6a6447813"
 dependencies = [
  "bitflags",
  "indexmap",
