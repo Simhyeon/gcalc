@@ -4,10 +4,10 @@ use gcalc::cli::Cli;
 
 fn main() -> GcalcResult<()> {
     #[cfg(feature = "binary")]
-
     if let Err(err) = Cli::run() {
+        use std::io::Write;
         // Propagate error to stdout
-        eprintln!("{}", err);
+        writeln!(std::io::stderr(),"{}", err)?;
     }
     Ok(())
 }
