@@ -1,14 +1,5 @@
 # TODO
 
-* [x] Plotters integration
-	* [x] Giving alternative option is stupid. Make a plot as "builder pattern"-able state variable
-	* [x] Make record as complete set of things ( Prob\_src field )
-	* [x] Multi y column plot img (left as probability, right as cost)
-	* [x] ~~Re-use records struct if possible, but currently you can't because prob is string~~
-	- I Simply made extract prob function
-	* [x] Plot object model for easier plot confiruation
-	* [x] Fix index problems
-
 * [ ] Make crate compatible with docs.rs
 * [ ] Probe if library usage is ergonmic enough
 * [ ] Create website
@@ -18,7 +9,24 @@
 
 # Why I ditched csv crate and used cindex instead
 
+CSV Crate is good for concrete struct based indexing. While gcalc gets possibly
+error prone + human written csv value. Thus, csv parsing should be generous and
+should have fallback behaviour. Furthermore csv value can lack required
+columns, which is hard to handle with csv crate.
+
+Cindex is very lenient and can pad lacking columns with empty values. Plus can
+extract value from raw csv, query into concrete form.
+
 # Implemented
+
+* [x] Plotters integration
+	* [x] Giving alternative option is stupid. Make a plot as "builder pattern"-able state variable
+	* [x] Make record as complete set of things ( Prob\_src field )
+	* [x] Multi y column plot img (left as probability, right as cost)
+	* [x] ~~Re-use records struct if possible, but currently you can't because prob is string~~
+	- I Simply made extract prob function
+	* [x] Plot object model for easier plot confiruation
+	* [x] Fix index problems
 
 * [x] Completely ditch out csv crate
 * [x] Default value is Empty string, map this into agreeable default value

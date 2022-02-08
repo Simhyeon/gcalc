@@ -42,7 +42,7 @@ gcalc <SUBCOMMAND> <OPTIONS>
 -s, --strict                   Set strict CSV reader mode, every try should be corresponding csv record.
 -t, --target <target>          Target probability to achieve
 -T, --type <probtype>          Probability type(percentage|fraction)
---plot						   Create plot vector graphics named as "out.svg"
+    --plot                     Create plot vector graphics named as "out.svg"
 ```
 
 ## Install
@@ -55,7 +55,7 @@ cargo install gcalc --features binary --locked
 **libary**
 ```toml
 [dependencies]
-gcalc = "0.2.0"
+gcalc = "0.3"
 ```
 
 ## Demo
@@ -159,12 +159,6 @@ count,probability,constant,cost
 	"no_header": false,
 	"strict": false,
 	"target": null,
-	"column_map": {
-		"count": 0,
-		"probability": 1,
-		"constant": 2,
-		"cost": 3
-	},
 	"format": "GFM",
 	"csv_ref": {
 		"File": "ref.csv"
@@ -194,22 +188,19 @@ or
 
 **Column mapping**
 
-You can read existing csv file without changing order of original source with
-column option. You can type any character if given colun is not used by gcalc.
+You can read existing csv file without changing the name of original columns with
+column mapping.
 
-Currently, reference csv **requires all count,cost,probability,constant
-columns**. This behaviour might change in the future though.
-
-Default order of columns are
+Column that is queried are 
 
 - count
-- probability
-- constant
+- prob
 - cost
+- constant
 
 ```bash
 # Example csv content...
-db,type,count,constant,cost,probability
+db,type,count,const,cost,probability
 t1,a,1,0.1,30,0.1
 t1,b,2,0.1,20,0.1
 t1,c,3,0.1,10,0.1
@@ -218,10 +209,7 @@ t1,b,5,0.2,20,0.2
 t1,c,6,0.2,10,0.3
 
 # Example usage
-gcalc --ref ref.csv range --count 6 --column db,type,count,constant,cost,probability
-
-# You can also write as
-gcalc --ref ref.csv range --count 6 --column ,,count,constant,cost,probability
+gcalc --ref ref.csv range --count 6 --column prob=probability,constant=const
 ```
 
 **Strict Read**
