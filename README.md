@@ -42,6 +42,7 @@ gcalc <SUBCOMMAND> <OPTIONS>
 -s, --strict                   Set strict CSV reader mode, every try should be corresponding csv record.
 -t, --target <target>          Target probability to achieve
 -T, --type <probtype>          Probability type(percentage|fraction)
+--plot						   Create plot vector graphics named as "out.svg"
 ```
 
 ## Install
@@ -274,6 +275,10 @@ On previous example, at the third record which is ```3,0.3,0.1,30```
 - Rollback : Set constant as 0.7 which is an initial value given as argument
 - Ignore   : Set constant as 0.2 which is the updated value of constant.
 - None     : Panics and abort a program
+
+## Demo plot image
+
+![Demo](docs/out.svg)
 
 ## About
 
