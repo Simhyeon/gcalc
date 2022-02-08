@@ -1,17 +1,13 @@
 # TODO
 
-* [x] Add offset for conditional operation
-* [x] Create wasm file
-	* [x] Weealloc integration
-	* [x] Pushed as npm package
-* [x] Update readme.md
-* [ ] Plotters integration
+* [x] Plotters integration
+	* [x] Giving alternative option is stupid. Make a plot as "builder pattern"-able state variable
+	* [x] Make record as complete set of things ( Prob\_src field )
 	* [x] Multi y column plot img (left as probability, right as cost)
 	* [x] ~~Re-use records struct if possible, but currently you can't because prob is string~~
 	- I Simply made extract prob function
 	* [x] Plot object model for easier plot confiruation
 	* [x] Fix index problems
-	* [ ] Make cli option for configuration
 
 * [ ] Make crate compatible with docs.rs
 * [ ] Probe if library usage is ergonmic enough
@@ -20,8 +16,18 @@
 	* [ ] Maybe github pages? -> This is somewhat important for show & prove perspective
 * [ ] Use github release api for automated draft
 
+# Why I ditched csv crate and used cindex instead
+
 # Implemented
 
+* [x] Completely ditch out csv crate
+* [x] Default value is Empty string, map this into agreeable default value
+* [x] Proper support of column mapping through ergonomic wrapper
+	- --column cost=yatti,prob=yatta
+* [x] Add offset for conditional operation
+* [x] Create wasm file
+	* [x] Weealloc integration
+	* [x] Pushed as npm package
 * [x] Rounding with format is somewhat... incoherent
 * [x] Config option support
 	* [x] Read config

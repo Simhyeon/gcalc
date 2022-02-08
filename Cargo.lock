@@ -44,8 +44,9 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 [[package]]
 name = "cindex"
 version = "0.3.3"
-source = "git+https://github.com/simhyeon/cindex#64df0cee590c9af4953b7f7d394ed665443d9448"
+source = "git+https://github.com/simhyeon/cindex#c5f88fcf883d1000722ebd3b9403d7389a878e3b"
 dependencies = [
+ "bitflags",
  "indexmap",
  "regex",
  "thiserror",
