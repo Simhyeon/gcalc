@@ -255,7 +255,7 @@ Invalid csv error
 **Fallback**
 
 Gcalc tries to parse CSV value as intended data type. But user can define
-fallback behaviour for such situations.
+fallback behaviour for some undefined situations.
 
 ```bash
 # Example csv file
