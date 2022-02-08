@@ -516,10 +516,9 @@ impl Calculator {
                 self.column_map["cost"].as_str(),
                 self.column_map["constant"].as_str(),
             ].join(",");
-            self.indexer.set_supplement(true);
             self.indexer.add_table_fast("ref", csv_value.as_bytes())?;
             self.indexer
-                .index_get_records(Query::from_str(&format!("SELECT {} FROM ref", columns))?)?.iter()
+                .index_get_records(Query::from_str(&format!("SELECT {} FROM ref FLAG SUP", columns))?)?.iter()
                 .map(|s| s.iter().map(|v| v.to_string()).collect()).collect::<Vec<Vec<String>>>()
         };
 

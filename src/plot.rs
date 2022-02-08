@@ -32,7 +32,7 @@ impl Renderer {
 
         let mut ctx = ChartBuilder::on(&root_area)
             .margin(10u32)
-            .x_label_area_size(50.0)
+            .x_label_area_size(50.0f32)
             .y_label_area_size(area_size)
             .right_y_label_area_size(area_size)
             .caption(&attr.caption, (ft.as_str(),fs as f64))
@@ -41,6 +41,8 @@ impl Renderer {
 
         // Mesh configuration
         ctx.configure_mesh()
+            .x_labels(20)
+            .y_labels(20)
             .disable_x_mesh()
             .disable_y_mesh()
             .bold_line_style(&WHITE.mix(0.3))
@@ -56,7 +58,7 @@ impl Renderer {
             .axis_desc_style((ft.as_str(),fs as f64 ))
             .draw().map_err(|_| GcalcError::PlotError(format!("Failed to configure secondary mesh for chart")))?;
 
-        // Porb series
+        // Prob series
         ctx.draw_series(LineSeries::new(
                 (1..).zip(data.iter()).map(|(x,y)| { 
                     (x,y.probability_src as f64)
@@ -64,21 +66,32 @@ impl Renderer {
                 Into::<ShapeStyle>::into(&RED).stroke_width(2).filled(),
         )).map_err(|_| GcalcError::PlotError(format!("Failed to embed data into a chart")))?;
 
+        // Point
+        ctx.draw_series(
+                (1..).zip(data.iter()).map(|(x,y)| { 
+                    Circle::new((x,y.probability_src as f64), 3, RED.filled())
+                }),
+        ).unwrap();
+
         // Bar seires
         ctx.draw_secondary_series(
             LineSeries::new(
                 (1usize..).zip(data.iter()).map(|(x,y)| { 
                     (x,y.cost)
                 }),
-                Into::<ShapeStyle>::into(&BLUE).stroke_width(2),
+                Into::<ShapeStyle>::into(&BLUE.mix(0.3)).stroke_width(2),
             )
         ).map_err(|_| GcalcError::PlotError(format!("Failed to embed data into a chart")))?;
 
-        // Backup
+        // Point
+        ctx.draw_secondary_series(
+                (1..).zip(data.iter()).map(|(x,y)| { 
+                    Circle::new((x,y.cost), 3, BLUE.mix(0.3).filled())
+                }),
+        ).unwrap();
 
         Ok(())
     }
-
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -103,9 +116,3 @@ impl Default for PlotAttribute {
         }
     }
 } 
-
-#[derive(Serialize, Deserialize,Clone,Copy, Debug)]
-pub enum PlotType {
-    Bar, // Bar horizontal
-    Line, // Line series
-}
