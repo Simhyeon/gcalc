@@ -1,6 +1,7 @@
 use std::string::FromUtf8Error;
 use std::num::ParseFloatError;
 
+use cindex::CIndexError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -13,8 +14,6 @@ pub enum GcalcError {
     StdIo(std::io::Error),
     #[error("Invalid csv error\n= {0}")] // This is logic error
     CsvError(String),
-    #[error("Failed to parse csv\n= {0}")]
-    FailedCsvParse(csv::Error),
     #[error("Invalid probability form\n= {0}")]
     InvalidProb(String),
     #[error("Invalid conversion\n= {0}")]
@@ -30,17 +29,13 @@ pub enum GcalcError {
     #[cfg(feature = "plotters")]
     #[error("Failed to create plot image \n= {0}")]
     PlotError(String),
+    #[error("{0}")]
+    CIndexError(CIndexError),
 }
 
 impl From<std::io::Error> for GcalcError {
     fn from(err : std::io::Error) -> Self {
         Self::StdIo(err)
-    }
-}
-
-impl From<csv::Error> for GcalcError {
-    fn from(err : csv::Error) -> Self {
-        Self::FailedCsvParse(err)
     }
 }
 
@@ -54,5 +49,11 @@ impl From<FromUtf8Error> for GcalcError {
 impl From<ParseFloatError> for GcalcError {
     fn from(err : ParseFloatError) -> Self {
         Self::ParseError(err.to_string())
+    }
+}
+
+impl From<CIndexError> for GcalcError {
+    fn from(err : CIndexError) -> Self {
+        Self::CIndexError(err)
     }
 }
