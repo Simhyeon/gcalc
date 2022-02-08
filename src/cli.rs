@@ -1,7 +1,7 @@
-use crate::{GcalcResult, Calculator, utils, TableFormat, ProbType, models::{CsvRef, ColumnMap}, GcalcError, calc::CalculatorOption};
+use crate::{GcalcResult, Calculator, utils, TableFormat, ProbType, models::{CsvRef}, GcalcError, calc::CalculatorOption};
 use clap::{ArgMatches,App, Arg};
-use std::{path::PathBuf, io::Read};
-use crate::consts::*;
+use std::{path::PathBuf, io::Read, collections::HashMap, iter::FromIterator};
+use std::io::Write;
 
 pub struct Cli;
 
@@ -51,7 +51,7 @@ impl Cli {
             .arg(Arg::new("format").help("Table format(csv|console|gfm)").short('f').long("format").takes_value(true))
             .arg(Arg::new("precision").help("Precision").short('P').long("precision").takes_value(true))
             .arg(Arg::new("probtype").help("Probability type(percentage|fraction)").short('T').long("type").takes_value(true))
-            .arg(Arg::new("column").help("Column mapping").short('l').long("column").takes_value(true))
+            .arg(Arg::new("column").help("Column mapping").long("column").takes_value(true))
             .arg(Arg::new("noheader").help("CSV without header").long("noheader"))
             .arg(Arg::new("out").help("Out file").short('o').long("out").takes_value(true))
             .arg(Arg::new("fallback").help("Set csv value fallback (rollback|ignore|none)").long("fallback").default_value("none"))
@@ -81,7 +81,7 @@ impl Cli {
             Some(( "option" , _)) => {
                 Self::subcommand_option()?;
             }
-            _ => eprintln!("No proper sub command was given to the program"),
+            _ => writeln!(std::io::stderr(),"No proper sub command was given to the program")?,
         }
 
         Ok(())
@@ -158,8 +158,8 @@ impl Cli {
     fn set_calculator_attribute(cal : &mut Calculator, args: &ArgMatches) -> GcalcResult<()> {
         #[cfg(feature = "option")]
         if let Some(file) = args.value_of("option") {
-            let option =  CalculatorOption::from_file(std::path::Path::new(file))?;
-            cal.set_option(&option);
+            let mut option =  CalculatorOption::from_file(std::path::Path::new(file))?;
+            cal.set_option(&mut option);
         }
 
         if let Some(prob) = args.value_of("prob") {
@@ -222,20 +222,26 @@ impl Cli {
     fn set_custom_column_order(cal : &mut Calculator, args: &ArgMatches) -> GcalcResult<()> {
         if let Some(order) = args.value_of("column") {
             let split_orders = order.split(',').collect::<Vec<&str>>();
-            if split_orders.len() < COLUMN_LEN {
-                return Err(GcalcError::InvalidArgument(format!("Column's length should be bigger or equal to \"{}\"", COLUMN_LEN)));
-            }
-            let (mut count, mut probability, mut constant, mut cost) = (COUNT_INDEX, BASIC_PROB_INDEX, ADDED_PROB_INDEX, COST_INDEX);
-            for (index, &item) in split_orders.iter().enumerate() {
-                match item {
-                    "count" => count = index,
-                    "probability" => probability = index,
-                    "constant" => constant = index,
-                    "cost" => cost = index,
-                    _ => (), // Skip item
+            let mut pair_map = HashMap::from_iter(
+                vec![ "count", "prob","cost","constant" ]
+                .into_iter().map(|v| (v.to_owned(), v.to_owned()))
+            );
+            for pair in split_orders {
+                let pair_split : Vec<&str> = pair.split('=').collect();
+                if pair_split.len() != 2 {
+                    return Err(GcalcError::InvalidArgument(format!("Could not make a column_map from given value : \"{}\"", pair)))
                 }
-            } 
-            cal.set_column_map(ColumnMap::new(count, probability, constant, cost));
+
+                let pair_type = match pair_split[0] {
+                    "count" | "prob" |"cost" | "constant" => Some(pair_split[0]),
+                    _ => None
+                };
+
+                if let Some(pair_type) = pair_type {
+                    pair_map.insert(pair_type.to_owned(), pair_split[1].to_owned());
+                }
+            }
+            cal.set_column_map(pair_map)
         }
         Ok(())
     }
@@ -248,7 +254,7 @@ impl Cli {
     #[cfg(feature = "option")]
     fn subcommand_option() -> GcalcResult<()> {
         let path = std::path::Path::new("option.json");
-        println!("Created new option file \"{}\"", path.display());
+        writeln!(std::io::stdout(),"Created new option file \"{}\"", path.display())?;
         std::fs::write(path, CalculatorOption::new().to_json()?)?;
         Ok(())
     }
