@@ -19,7 +19,7 @@ impl Cli {
         let qual_app  = Self::common_app_args(App::new("qual").about("Conditional calculation but only prints result"));
 
         let main_app = App::new("gcalc")
-            .version("0.2.0")
+            .version("0.3.1")
             .author("Simon creek <simoncreek@tutanota.com>")
             .about("Gcalc is a gacha simulator for game development and other decision makings.") // meta information end
             .subcommand(cond_app
@@ -101,11 +101,10 @@ impl Cli {
         }
         Self::set_calculator_attribute(&mut cal, args)?;
 
+        cal.set_plot(args.is_present("plot"));
         cal.print_range(
             count, 
             Some(min),
-            #[cfg(feature = "plotters")]
-            args.is_present("plot")
         )?;
 
         Ok(())
@@ -130,10 +129,8 @@ impl Cli {
             cal.set_offset(offset);
         }
 
-        cal.print_conditional(
-            #[cfg(feature = "plotters")]
-            args.is_present("plot")
-        )?;
+        cal.set_plot(args.is_present("plot"));
+        cal.print_conditional()?;
         Ok(())
     }
 

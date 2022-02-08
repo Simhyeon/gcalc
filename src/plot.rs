@@ -1,14 +1,13 @@
 use crate::models::{GcalcResult, Record};
-use crate::{GcalcError, ProbType};
+use crate::GcalcError;
 use plotters::prelude::*;
 use std::path::Path;
 use serde::{Deserialize, Serialize};
-use crate::utils;
 
 pub(crate) struct Renderer;
 
 impl Renderer {
-    pub fn draw_chart(attr: PlotAttribute, data: &Vec<Record>, prob_type: &ProbType) -> GcalcResult<()> {
+    pub fn draw_chart(attr: PlotAttribute, data: &Vec<Record>) -> GcalcResult<()> {
         let root_area = SVGBackend::new(Path::new("out.svg"), attr.img_size).into_drawing_area();
         root_area.fill(&WHITE).unwrap();
 
@@ -60,7 +59,7 @@ impl Renderer {
         // Porb series
         ctx.draw_series(LineSeries::new(
                 (1..).zip(data.iter()).map(|(x,y)| { 
-                    (x,utils::extract_prob_from_string(&y.probability, prob_type).unwrap() as f64)
+                    (x,y.probability_src as f64)
                 }),
                 Into::<ShapeStyle>::into(&RED).stroke_width(2).filled(),
         )).map_err(|_| GcalcError::PlotError(format!("Failed to embed data into a chart")))?;

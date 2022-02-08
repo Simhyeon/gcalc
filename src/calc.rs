@@ -33,6 +33,7 @@ pub struct CalculatorOption {
     csv_ref: CsvRef, // -> For wasm it should be defined differently
     out_option : OutOption,
     column_map: HashMap<String,String>,
+    plot: bool,
 }
 
 #[cfg(feature = "option")]
@@ -57,6 +58,7 @@ impl CalculatorOption {
             format: TableFormat::CSV,
             csv_ref: CsvRef::None, // -> For wasm it should be defined differently
             out_option : OutOption::Console,
+            plot: false,
         }
     }
 
@@ -89,6 +91,7 @@ pub struct Calculator {
     // Which behaviour to take when csv rows ends
     record_behaviour: CsvRecordBehaviour, // Strict option
     out_option: OutOption,
+    plot: bool,
 }
 impl Calculator {
     // <BUILDER>
@@ -110,6 +113,7 @@ impl Calculator {
             prob_type: ProbType::Fraction,
             record_behaviour : CsvRecordBehaviour::Repeat,
             out_option: OutOption::Console,
+            plot: false,
         })
     }
 
@@ -196,14 +200,19 @@ impl Calculator {
         self
     }
 
-    pub fn out_file(mut self, path: &Path) -> Self {
-        self.out_option= OutOption::File(path.to_owned());
+    pub fn out_file(mut self, path: impl AsRef<Path>) -> Self {
+        self.out_option= OutOption::File(path.as_ref().to_owned());
         self
     }
 
     pub fn csv_fallback(mut self, behaviour: &str) -> GcalcResult<Self> {
         self.csv_invalid_behaviour= CSVInvalidBehaviour::from_str(behaviour)?;
         Ok(self)
+    }
+
+    pub fn plot(mut self, tv: bool) -> Self {
+        self.plot = tv;
+        self
     }
     // </BUILDER>
     
@@ -297,6 +306,10 @@ impl Calculator {
         self.csv_invalid_behaviour= CSVInvalidBehaviour::from_str(behaviour)?;
         Ok(())
     }
+
+    pub fn set_plot(&mut self, tv: bool) {
+        self.plot = tv;
+    }
     // </SETTER>
 
     // <PROCESSING>
@@ -304,8 +317,6 @@ impl Calculator {
         &mut self,
         count: Option<usize>,
         start_index: Option<usize>,
-        #[cfg(feature = "plotters")]
-        plot: bool
     ) -> GcalcResult<()> {
         // Update count for calculation
         if let Some(count) = count {
@@ -314,22 +325,20 @@ impl Calculator {
         let records = self.create_records(true)?;
         self.print_records(&records, Some((start_index.unwrap_or(0),self.count)))?;
         #[cfg(feature = "plotters")]
-        if plot {
-            Renderer::draw_chart(PlotAttribute::default(), &records, &self.prob_type)?;
+        if self.plot {
+            Renderer::draw_chart(PlotAttribute::default(), &records)?;
         }
         Ok(())
     }
 
     pub fn print_conditional(
         &mut self,
-        #[cfg(feature = "plotters")]
-        plot: bool
     ) -> GcalcResult<()> {
         let records = self.create_records(false)?;
         self.print_records(&records, None)?;
         #[cfg(feature = "plotters")]
-        if plot {
-            Renderer::draw_chart(PlotAttribute::default(), &records, &self.prob_type)?;
+        if self.plot {
+            Renderer::draw_chart(PlotAttribute::default(), &records)?;
         }
         Ok(())
     }
@@ -433,7 +442,7 @@ impl Calculator {
             // total_cost should be calculated before push
             total_cost = total_cost + self.state.cost;
 
-            records.push(Record::new(record_index + 1,prob_str.to_owned(), total_cost, self.state.constant));
+            records.push(Record::new(record_index + 1,self.state.success_until,prob_str.to_owned(), total_cost, self.state.constant));
             
             // If current probability is bigger than target_probability break
             if let Some(target) = self.target_probability {
@@ -478,7 +487,7 @@ impl Calculator {
                 );
 
                 total_cost = total_cost + self.state.cost;
-                records.push(Record::new(record_index + 1,prob_str.to_owned(), total_cost, self.state.constant));
+                records.push(Record::new(record_index + 1,self.state.success_until,prob_str.to_owned(), total_cost, self.state.constant));
 
                 // If and only if cursor is next,
                 // increase csv index

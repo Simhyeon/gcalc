@@ -36,15 +36,17 @@ impl Qualficiation {
 #[cfg_attr(feature= "tabled" ,derive(Tabled))]
 pub(crate) struct Record {
     pub count: usize,
+    pub probability_src: f32,
     pub probability : String,
     pub cost : f32,
     pub constant: f32,
 }
 
 impl Record {
-    pub fn new(count: usize, probability: String, cost: f32, constant: f32) -> Self {
+    pub fn new(count: usize, probability_src: f32, probability: String, cost: f32, constant: f32) -> Self {
         Self {
             count,
+            probability_src,
             probability,
             cost,
             constant,

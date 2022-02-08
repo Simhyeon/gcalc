@@ -20,18 +20,6 @@ pub fn geometric_series_qual(probability: f32, qalification: f32) -> usize {
     count_similar.ceil() as usize
 }
 
-pub fn extract_prob_from_string(number_str: &str, prob_type: &ProbType) -> GcalcResult<f32> {
-    let number = match prob_type {
-        ProbType::Fraction => {
-            number_str.parse::<f32>().map_err(|_| GcalcError::InvalidConversion(format!("Failed to convert string \"{}\" into number", number_str)))?
-        }
-        ProbType::Percentage => {
-            number_str.strip_suffix("%").unwrap().parse::<f32>().map_err(|_| GcalcError::InvalidConversion(format!("Failed to convert string \"{}\" into number", number_str)))? / 100f32
-        }
-    };
-    Ok(number)
-}
-
 /// Get probability as lenient as possible
 pub fn get_prob_alap(number_str: &str, suffix: Option<&str>) -> GcalcResult<f32> {
     let mut number = number_str.to_owned();
