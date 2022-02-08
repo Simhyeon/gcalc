@@ -9,33 +9,7 @@ use crate::GcalcError;
 
 pub type GcalcResult<T> = Result<T, GcalcError>;
 
-#[cfg_attr(feature= "option" ,derive(Serialize, Deserialize,Clone,Copy))]
-pub struct ColumnMap {
-    pub count: usize,
-    pub probability: usize,
-    pub constant: usize,
-    pub cost: usize,
-}
-
-impl Default for ColumnMap {
-    fn default() -> Self {
-        Self {
-            count: 0,
-            probability: 1,
-            constant: 2,
-            cost: 3,
-        }
-    }
-}
-
-impl ColumnMap {
-    pub fn new( count: usize, probability: usize, constant: usize, cost: usize) -> Self {
-        Self { count, probability, constant, cost, }
-    }
-}
-
 #[cfg_attr(feature= "tabled" ,derive(Tabled))]
-#[derive(Serialize)]
 pub(crate) struct Qualficiation {
     pub count: usize,
     pub probability: String,
@@ -50,23 +24,39 @@ impl Qualficiation {
             probability: probability.to_owned(),
         }
     }
+
+    pub fn join_as_csv(&self) -> String {
+        let mut joined = self.count.to_string();
+        joined.push_str(&format!(",{}", self.probability));
+        joined.push_str(&format!(",{}", self.cost.to_string()));
+        joined
+    }
 }
 
 #[cfg_attr(feature= "tabled" ,derive(Tabled))]
-#[derive(Serialize)]
 pub(crate) struct Record {
     pub count: usize,
     pub probability : String,
     pub cost : f32,
+    pub constant: f32,
 }
 
 impl Record {
-    pub fn new(count: usize, probability: String, cost: f32) -> Self {
+    pub fn new(count: usize, probability: String, cost: f32, constant: f32) -> Self {
         Self {
             count,
             probability,
             cost,
+            constant,
         }
+    }
+
+    pub fn join_as_csv(&self) -> String {
+        let mut joined = self.count.to_string();
+        joined.push_str(&format!(",{}", self.probability));
+        joined.push_str(&format!(",{}", self.cost.to_string()));
+        joined.push_str(&format!(",{}", self.constant.to_string()));
+        joined
     }
 }
 

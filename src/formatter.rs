@@ -1,22 +1,20 @@
 use std::error::Error;
-use csv::WriterBuilder;
 #[cfg(feature = "tabled")]
 use tabled::{Table, Style};
 
-use crate::{models::{Record, Qualficiation}, GcalcResult, GcalcError};
+use crate::{models::{Record, Qualficiation}, GcalcResult};
+
+#[cfg(windows)]
+const LINE_ENDING: &'static str = "\r\n";
+#[cfg(not(windows))]
+const LINE_ENDING: &'static str = "\n";
 
 pub(crate) struct QualFormatter;
 
 impl QualFormatter {
     // pub fn to_csv_table( qual :Qualficiation) -> Result<String, Box<dyn Error>> {
-    pub fn to_csv_table( qual :Qualficiation) -> GcalcResult<String> {
-        let mut wtr = WriterBuilder::new().from_writer(vec![]);
-        wtr.serialize(qual)?;
-        let data = String::from_utf8(
-            wtr.into_inner()
-            .map_err(|_| GcalcError::Unknown("Failed to create iterator from struct".to_owned()))?
-        )?;
-// 
+    pub fn to_csv_table(qual :Qualficiation) -> GcalcResult<String> {
+        let data = qual.join_as_csv();
         Ok(data)
     }
 
@@ -34,7 +32,7 @@ impl RecordFormatter {
         values :&Vec<Record>,
         range: Option<(usize,usize)>
     ) -> Result<String, Box<dyn Error>> {
-        let mut wtr = WriterBuilder::new().from_writer(vec![]);
+        let mut string_records = vec![];
         let (min,max) = if let Some((min,max)) = range {
             (min,max)
         } else {
@@ -43,11 +41,11 @@ impl RecordFormatter {
 
         for (index, value) in values.iter().enumerate() {
             if index >= min && index <= max {
-                wtr.serialize(value)?;
+                string_records.push(value.join_as_csv());
             }
         }
 
-        let data = String::from_utf8(wtr.into_inner()?)?;
+        let data = string_records.join(LINE_ENDING);
 
         Ok(data)
     }

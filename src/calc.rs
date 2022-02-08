@@ -1,8 +1,11 @@
+use std::collections::HashMap;
+use std::iter::FromIterator;
 use std::path::Path;
+use std::io::Write;
 
-use csv::StringRecordsIntoIter;
+use cindex::{Indexer, Query};
 
-use crate::models::{Record, Qualficiation, ColumnMap, CsvRef, OutOption, RecordCursor, CSVInvalidBehaviour, ProbType};
+use crate::models::{Record, Qualficiation, CsvRef, OutOption, RecordCursor, CSVInvalidBehaviour, ProbType};
 #[cfg(feature = "plotters")]
 use crate::plot::{PlotAttribute, Renderer};
 use crate::{GcalcResult, GcalcError};
@@ -25,16 +28,21 @@ pub struct CalculatorOption {
     no_header: bool,
     strict: bool,
     target: Option<f32>,
-    column_map: ColumnMap,
     // Non-wasm exclusive options
     format: TableFormat,
     csv_ref: CsvRef, // -> For wasm it should be defined differently
     out_option : OutOption,
+    column_map: HashMap<String,String>,
 }
 
 #[cfg(feature = "option")]
 impl CalculatorOption {
     pub fn new() -> Self {
+        let column_map = HashMap::from_iter(
+            vec![ "count", "prob","cost","constant" ]
+            .into_iter().map(|v| (v.to_owned(), v.to_owned()))
+        );
+
         Self {
             count: 0,
             prob_type: ProbType::Fraction,
@@ -44,7 +52,7 @@ impl CalculatorOption {
             no_header: false,
             strict: false,
             target: None,
-            column_map: ColumnMap::default(),
+            column_map,
             // Non-wasm exclusive options
             format: TableFormat::CSV,
             csv_ref: CsvRef::None, // -> For wasm it should be defined differently
@@ -65,13 +73,14 @@ impl CalculatorOption {
 // TODO 
 // Csv file
 pub struct Calculator {
+    indexer: Indexer,
     state: CalcState,
     count: usize,
     offset: Option<usize>,
     format: TableFormat,
     csv_ref: CsvRef,
     csv_no_header: bool,
-    column_map: ColumnMap,
+    column_map: HashMap<String,String>,
     csv_invalid_behaviour: CSVInvalidBehaviour,
     prob_precision: Option<usize>,
     budget: Option<f32>,
@@ -86,12 +95,13 @@ impl Calculator {
     // Constructor methods
     pub fn new() -> GcalcResult<Self> {
         Ok(Self {
+            indexer: Indexer::new(),
             state : CalcState::new(),
             count : 0,
             offset: None,
             csv_ref : CsvRef::None,
             csv_no_header: false,
-            column_map: ColumnMap::new(COUNT_INDEX, BASIC_PROB_INDEX, ADDED_PROB_INDEX, COST_INDEX),
+            column_map: HashMap::new(),
             format: TableFormat::CSV,
             csv_invalid_behaviour: CSVInvalidBehaviour::None,
             prob_precision: None,
@@ -113,7 +123,7 @@ impl Calculator {
         self.csv_no_header = option.no_header;
         self.set_strict_csv(option.strict);
         self.target_probability = option.target;
-        self.column_map = option.column_map;
+        self.column_map = option.column_map.clone();
         self.format = option.format;
         self.csv_ref = option.csv_ref.clone();
         self.out_option = option.out_option.clone();
@@ -125,7 +135,7 @@ impl Calculator {
         self
     }
 
-    pub fn column_map(mut self, column_map: ColumnMap) -> Self {
+    pub fn column_map(mut self, column_map: HashMap<String, String>) -> Self {
         self.column_map = column_map;
         self
     }
@@ -200,7 +210,6 @@ impl Calculator {
     // <SETTER>
     #[cfg(feature = "option")]
     pub fn set_option(&mut self, option: &CalculatorOption) {
-        let option = option.to_owned();
         self.count = option.count;
         self.prob_type = option.prob_type;
         self.prob_precision  = option.prob_precision;
@@ -209,13 +218,13 @@ impl Calculator {
         self.csv_no_header = option.no_header;
         self.set_strict_csv(option.strict);
         self.target_probability = option.target;
-        self.column_map = option.column_map;
+        self.column_map = option.column_map.clone();
         self.format = option.format;
         self.csv_ref = option.csv_ref.clone();
         self.out_option = option.out_option.clone();
     }
 
-    pub fn set_column_map(&mut self, column_map: ColumnMap) {
+    pub fn set_column_map(&mut self, column_map: HashMap<String, String>) {
         self.column_map = column_map;
     }
 
@@ -398,11 +407,7 @@ impl Calculator {
             CsvRef::None => "".to_owned()
         };
 
-        // Total csv records iterator
-        let mut csv_record = csv::ReaderBuilder::new()
-            .has_headers(!self.csv_no_header)
-            .from_reader(csv_value.as_bytes())
-            .into_records();
+        let mut csv_records = self.index_record_from_value(&csv_value)?.into_iter();
 
         let mut records : Vec<Record> = Vec::new();
         let mut total_cost = 0f32;
@@ -415,7 +420,7 @@ impl Calculator {
             cursor = RecordCursor::Next;
 
             // Only if csv value is not empty, update the state from csv value(file)
-            if !csv_value.is_empty() { self.update_state_from_csv_file(&mut csv_record, csv_index, &mut cursor)?; }
+            if !csv_value.is_empty() { self.update_state_from_csv_file(&mut csv_records, csv_index, &mut cursor)?; }
             self.calculate_fail_success()?;
 
             let prob_str = utils::get_prob_as_formatted(
@@ -423,10 +428,12 @@ impl Calculator {
                 &self.prob_type,
                 &self.prob_precision
             );
+
             // Because first try also consumes cost
             // total_cost should be calculated before push
             total_cost = total_cost + self.state.cost;
-            records.push(Record::new(record_index + 1,prob_str.to_owned(), total_cost));
+
+            records.push(Record::new(record_index + 1,prob_str.to_owned(), total_cost, self.state.constant));
             
             // If current probability is bigger than target_probability break
             if let Some(target) = self.target_probability {
@@ -461,7 +468,7 @@ impl Calculator {
                 cursor = RecordCursor::Next;
 
                 // Only if csv value is not empty, update the state from csv value(file)
-                if !csv_value.is_empty() { self.update_state_from_csv_file(&mut csv_record, csv_index, &mut cursor)?; }
+                if !csv_value.is_empty() { self.update_state_from_csv_file(&mut csv_records, csv_index, &mut cursor)?; }
                 self.calculate_fail_success()?;
 
                 let prob_str = utils::get_prob_as_formatted(
@@ -471,7 +478,7 @@ impl Calculator {
                 );
 
                 total_cost = total_cost + self.state.cost;
-                records.push(Record::new(record_index + 1,prob_str.to_owned(), total_cost));
+                records.push(Record::new(record_index + 1,prob_str.to_owned(), total_cost, self.state.constant));
 
                 // If and only if cursor is next,
                 // increase csv index
@@ -489,75 +496,48 @@ impl Calculator {
 
         Ok(records)
     }
+
+    fn index_record_from_value(&mut self, csv_value: &str) -> GcalcResult<Vec<Vec<String>>> {
+        let result = if csv_value.is_empty() {
+            vec![]
+        } else {
+            let columns = vec![
+                self.column_map["count"].as_str(),
+                self.column_map["prob"].as_str(),
+                self.column_map["cost"].as_str(),
+                self.column_map["constant"].as_str(),
+            ].join(",");
+            self.indexer.set_supplement(true);
+            self.indexer.add_table_fast("ref", csv_value.as_bytes())?;
+            self.indexer
+                .index_get_records(Query::from_str(&format!("SELECT {} FROM ref", columns))?)?.iter()
+                .map(|s| s.iter().map(|v| v.to_string()).collect()).collect::<Vec<Vec<String>>>()
+        };
+
+        Ok(result)
+    }
     // </PROCESSING>
 
     // <INTERNAL>
-    fn update_state_from_csv_file(&mut self, csv_records :&mut StringRecordsIntoIter<&[u8]>, index: usize, cursor: &mut RecordCursor) -> GcalcResult<()> {
+    fn update_state_from_csv_file<'a>(&mut self, csv_records : &mut impl Iterator<Item=Vec<String>>, index: usize, cursor: &mut RecordCursor) -> GcalcResult<()> {
         match csv_records.next() {
             Some(row) => {
-                // Temporary bound
-                let row = row?;
-                let row = row.iter().collect::<Vec<&str>>();
-
                 // Get Count,
-                // and check if count is same with current index( which is acutally "index + 1" )
-                if row.len() > self.column_map.count {
-                    if row[self.column_map.count].parse::<usize>().expect("Failed to get count as number") > index + 1 {
-                        *cursor = RecordCursor::Stay;
-                        // Do nothing & respect previous value,
-                        return Ok(());
-                    }
+                // If index is bigger than current csv index.
+                // Wait(pass) until it matches the index
+                // if count is empty than interpret it as current index
+                if self.get_count_from_row(&row, index)? > index + 1 {
+                    *cursor = RecordCursor::Stay;
+                    // Do nothing & respect previous value,
+                    return Ok(());
                 }
-
                 // Get probability
-                if row.len() > self.column_map.probability {
-                    match utils::get_prob_alap(row[self.column_map.probability],None) {
-                        Ok(value) => self.state.probability = value,
-                        Err(err)  => {
-                            match self.csv_invalid_behaviour { 
-                                CSVInvalidBehaviour::None => return Err(err),                                  // this is error
-                                CSVInvalidBehaviour::Ignore => (),                                             // Do not update value
-                                CSVInvalidBehaviour::Rollback => self.state.probability = self.state.initial_probability,   // Use default value
-                            }
-                        }
-                    }
-                }
-
+                self.set_prob_from_row(&row)?;
                 // Get constant probability
-                if row.len() > self.column_map.constant {
-                    match utils::get_prob_alap(row[self.column_map.constant],None) {
-                        Ok(value) => self.state.constant = value,
-                        Err(err)  => {
-                            match self.csv_invalid_behaviour { 
-                                CSVInvalidBehaviour::None => return Err(err),                                  // this is error
-                                CSVInvalidBehaviour::Ignore => (),                                             // Do not update value
-                                CSVInvalidBehaviour::Rollback => self.state.constant = self.state.initial_constant,      // Use default value
-                            }
-                        }
-                    }
-                }
-
+                self.set_constant_from_row(&row)?;
                 // Get cost
-                if row.len() > self.column_map.cost {
-                    match row[self.column_map.cost].parse::<f32>() {
-                        Ok(value) => self.state.cost = value,
-                        Err(_) => {
-                            match self.csv_invalid_behaviour { 
-                                CSVInvalidBehaviour::None => {                                                     // this is error
-                                    return Err(GcalcError::ParseError(
-                                            format!(
-                                                "Cost should be a number, but the value in ({},{}) is not", 
-                                                index + 1, 
-                                                self.column_map.cost
-                                            )))
-                                },                                                     
-                                CSVInvalidBehaviour::Ignore => (),                                                 // Do not update value
-                                CSVInvalidBehaviour::Rollback => self.state.cost = self.state.initial_cost,      // Use default value
-                            }
-                        }
-                    }
+                self.set_cost_from_row(&row, index)?;
 
-                }
             } // End some match
             None => { // Record not found 
                 match self.record_behaviour {
@@ -565,6 +545,89 @@ impl Calculator {
                     CsvRecordBehaviour::Panic => {
                         return Err(GcalcError::CsvError(format!("Empty row in index: {}", index + 1))); 
                     }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn get_count_from_row(&self, row: &Vec<String>, index: usize) -> GcalcResult<usize> {
+        let count = &row[COUNT_INDEX];
+        if count.is_empty() {
+            // Index + 1 is the current index that is processing
+            // By returning current index value
+            // Row without count will interpret the given row as declartive not conditional
+            Ok(index + 1)
+        } else {
+            // TODO Remove expect
+            Ok(count.parse::<usize>().expect("Failed to get count as number"))
+        }
+    }
+
+    fn set_prob_from_row(&mut self, row: &Vec<String>) -> GcalcResult<()> {
+        let prob = &row[PROB_INDEX];
+        let result = if prob.is_empty() {
+            Err(GcalcError::ParseError(format!("No probability in record")))
+        } else {
+            // TODO Remove expect
+            Ok(utils::get_prob_alap(&row[PROB_INDEX],None)?)
+        };
+        match result {
+            Ok(value) => self.state.probability = value,
+            Err(err)  => {
+                match self.csv_invalid_behaviour { 
+                    CSVInvalidBehaviour::None => return Err(err), // this is error
+                    CSVInvalidBehaviour::Ignore => (), // Do not update value
+                    CSVInvalidBehaviour::Rollback => self.state.probability = self.state.initial_probability, // Use default value
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn set_cost_from_row(&mut self, row: &Vec<String>, index: usize) -> GcalcResult<()> {
+        let cost = &row[COST_INDEX];
+        let result: GcalcResult<f32> = if cost.is_empty() {
+            Ok(0.0f32)
+        } else {
+            // TODO Remove expect
+            Ok(row[COST_INDEX].parse::<f32>().expect("Failed to parse cost"))
+        };
+        match result {
+            Ok(value) => self.state.cost = value,
+            Err(_) => {
+                match self.csv_invalid_behaviour { 
+                    CSVInvalidBehaviour::None => { // this is error
+                        return Err(GcalcError::ParseError(
+                                format!(
+                                    "Cost should be a number, but the value in ({},{}) is not", 
+                                    index + 1, 
+                                    row[COST_INDEX]
+                                )))
+                    },                                                     
+                    CSVInvalidBehaviour::Ignore => (), // Do not update value
+                    CSVInvalidBehaviour::Rollback => self.state.cost = self.state.initial_cost, // Use default value
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn set_constant_from_row(&mut self, row: &Vec<String>) -> GcalcResult<()> {
+        let constant = &row[CONSTANT_INDEX];
+        let result = if constant.is_empty() {
+            Err(GcalcError::ParseError(format!("No const value in record")))
+        } else {
+            // TODO Remove expect
+            Ok(utils::get_prob_alap(&row[CONSTANT_INDEX],None)?)
+        };
+        match result {
+            Ok(value) => self.state.constant = value,
+            Err(err)  => {
+                match self.csv_invalid_behaviour { 
+                    CSVInvalidBehaviour::None => return Err(err), // this is error
+                    CSVInvalidBehaviour::Ignore => (), // Do not update value
+                    CSVInvalidBehaviour::Rollback => self.state.constant = self.state.initial_constant, // Use default value
                 }
             }
         }
@@ -650,10 +713,10 @@ impl Calculator {
 
     fn yield_table(&self, table: &str) -> GcalcResult<()> {
         match &self.out_option {
-            OutOption::Console => print!("{}", table),
+            OutOption::Console => write!(std::io::stdout(),"{}", table)?,
             OutOption::File(path) => {
                 if let Err(err) = std::fs::write(path, table.as_bytes()) {
-                    eprintln!("File \"{}\" cannot be used as output redirection.", path.display());
+                    writeln!(std::io::stderr(),"File \"{}\" cannot be used as output redirection.", path.display())?;
                     return Err(GcalcError::StdIo(err));
                 }
             }
