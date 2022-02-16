@@ -34,6 +34,24 @@ impl Qualficiation {
 }
 
 #[cfg_attr(feature= "tabled" ,derive(Tabled))]
+pub(crate) struct FormatRecord {
+    pub count: usize,
+    pub probability : String,
+    pub cost : f32,
+    pub constant: f32,
+}
+
+impl FormatRecord {
+    pub fn from_record(record: &Record) -> Self {
+        Self {
+            count: record.count,
+            probability: record.probability.to_string(),
+            cost : record.cost,
+            constant: record.constant,
+        }
+    }
+}
+
 pub(crate) struct Record {
     pub count: usize,
     pub probability_src: f32,

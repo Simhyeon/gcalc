@@ -61,8 +61,13 @@ impl RecordFormatter {
             (min,max)
         } else { (0,values.len()) };
 
+        //  Convert to format record
+        let values: Vec<_> = values.iter().map(|s| FormatRecord::from_record(s)).collect();
+
         // If range is for whole values(records)
         // skip range check and create whole table from values
+
+        use crate::models::FormatRecord;
         if (min, max) == (0, values.len()) {
             table = Table::new(values).with(style);
         } else {
