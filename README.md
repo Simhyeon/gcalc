@@ -2,8 +2,11 @@
 
 Gcalc is a game probability calculator.
 
-Gcalc is not merely a gacha simulator but more of a generic probability
-calculator.
+Gcalc is not a gacha simulator but more of a generic probability calculator.
+Consequently gcalc's goal is not about getting a percentage from given try
+counts, but calculate expected effects of the "tries". Such expectation can be
+used to decide how many tries should be given to users, assess the economical
+effect that game events might occur and so on and so forth.
 
 ## Usage
 
@@ -36,6 +39,7 @@ gcalc <SUBCOMMAND> <OPTIONS>
 -o, --out <FILE>               File to write output
 -O, --option <option>          Option file to use
 -p, --probability <prob>       Basic probability
+    --value <value>            Target goal's value
 -P, --precision <precision>    Precision
 -r, --ref <reference>          Reference file
     --refin                    Reference from stdin
@@ -55,7 +59,7 @@ cargo install gcalc --features binary --locked
 **libary**
 ```toml
 [dependencies]
-gcalc = "0.3"
+gcalc = "*"
 ```
 
 ## Demo
@@ -92,49 +96,49 @@ Results of prior usages are,
 
 ```bash
 # gcalc cond --probability 0.2 --budget 100 --cost 20 -f console --precision 2 -T percentage -t 0.6
-+-------+-------------+------+
-| count | probability | cost |
-+-------+-------------+------+
-|   1   |   20.00%    |  20  |
-+-------+-------------+------+
-|   2   |   36.00%    |  40  |
-+-------+-------------+------+
-|   3   |   48.80%    |  60  |
-+-------+-------------+------+
-|   4   |   59.04%    |  80  |
-+-------+-------------+------+
-|   5   |   67.23%    | 100  |
-+-------+-------------+------+
++-------+-------------+------+----------+-------+
+| count | probability | cost | constant | value |
++-------+-------------+------+----------+-------+
+|   1   |   20.00%    |  20  |    0     |   0   |
++-------+-------------+------+----------+-------+
+|   2   |   36.00%    |  40  |    0     |   0   |
++-------+-------------+------+----------+-------+
+|   3   |   48.80%    |  60  |    0     |   0   |
++-------+-------------+------+----------+-------+
+|   4   |   59.04%    |  80  |    0     |   0   |
++-------+-------------+------+----------+-------+
+|   5   |   67.23%    | 100  |    0     |   0   |
++-------+-------------+------+----------+-------+
 
 # gcalc range --probability 0.2 --count 10 --format gfm --precision 2 --cost 1000
-| count | probability | cost  |
-|-------+-------------+-------|
-|   1   |    0.20     | 1000  |
-|   2   |    0.36     | 2000  |
-|   3   |    0.48     | 3000  |
-|   4   |    0.59     | 4000  |
-|   5   |    0.67     | 5000  |
-|   6   |    0.73     | 6000  |
-|   7   |    0.79     | 7000  |
-|   8   |    0.83     | 8000  |
-|   9   |    0.86     | 9000  |
-|  10   |    0.89     | 10000 |
+| count | probability | cost  | constant | value |
+|-------+-------------+-------+----------+-------|
+|   1   |    0.20     | 1000  |    0     |   0   |
+|   2   |    0.36     | 2000  |    0     |   0   |
+|   3   |    0.48     | 3000  |    0     |   0   |
+|   4   |    0.59     | 4000  |    0     |   0   |
+|   5   |    0.67     | 5000  |    0     |   0   |
+|   6   |    0.73     | 6000  |    0     |   0   |
+|   7   |    0.79     | 7000  |    0     |   0   |
+|   8   |    0.83     | 8000  |    0     |   0   |
+|   9   |    0.86     | 9000  |    0     |   0   |
+|  10   |    0.89     | 10000 |    0     |   0   |
 
 # gcalc cond --probability 0.2 --format csv --precision 2 --target 0.8
-count,probability,cost
-1,0.20,0.0
-2,0.36,0.0
-3,0.48,0.0
-4,0.59,0.0
-5,0.67,0.0
-6,0.73,0.0
-7,0.79,0.0
-8,0.83,0.0
+count,probability,cost,constant,value
+1,0.20,0,0,0
+2,0.36,0,0,0
+3,0.48,0,0,0
+4,0.59,0,0,0
+5,0.67,0,0,0
+6,0.73,0,0,0
+7,0.79,0,0,0
+8,0.83,0,0,0
 
 # gcalc qual --probability 0.001 -f gfm --target 0.99 --precision 2
-| count | probability | cost |
-|-------+-------------+------|
-| 4602  |    0.99     |  0   |
+| count | probability | cost | value |
+|-------+-------------+------+-------|
+| 4602  |    0.99     |  0   |   0   |
 ```
 
 **Reference file example**
@@ -159,6 +163,7 @@ count,probability,constant,cost
 	"no_header": false,
 	"strict": false,
 	"target": null,
+	"value": null,
 	"format": "GFM",
 	"csv_ref": {
 		"File": "ref.csv"
@@ -209,7 +214,7 @@ t1,b,5,0.2,20,0.2
 t1,c,6,0.2,10,0.3
 
 # Example usage
-gcalc --ref ref.csv range --count 6 --column prob=probability,constant=const
+gcalc range --ref ref.csv  --count 6 --column prob=probability,constant=const
 ```
 
 **Strict Read**
