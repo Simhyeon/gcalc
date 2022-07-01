@@ -41,6 +41,7 @@ pub(crate) struct FormatRecord {
     pub probability: String,
     pub cost: f32,
     pub constant: f32,
+    pub expected_value: f32,
 }
 
 impl FormatRecord {
@@ -50,16 +51,18 @@ impl FormatRecord {
             probability: record.probability.to_string(),
             cost: record.cost,
             constant: record.constant,
+            expected_value: record.value.round(),
         }
     }
 }
 
 pub(crate) struct Record {
     pub count: usize,
-    pub probability_src: f32,
+    pub probability_src: f32, // Used by plots
     pub probability: String,
     pub cost: f32,
     pub constant: f32,
+    pub value: f32,
 }
 
 impl Record {
@@ -69,6 +72,7 @@ impl Record {
         probability: String,
         cost: f32,
         constant: f32,
+        value: f32,
     ) -> Self {
         Self {
             count,
@@ -76,6 +80,7 @@ impl Record {
             probability,
             cost,
             constant,
+            value,
         }
     }
 
@@ -84,6 +89,7 @@ impl Record {
         joined.push_str(&format!(",{}", self.probability));
         joined.push_str(&format!(",{}", self.cost));
         joined.push_str(&format!(",{}", self.constant));
+        joined.push_str(&format!(",{}", self.value));
         joined
     }
 }

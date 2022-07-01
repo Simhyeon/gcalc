@@ -32,19 +32,18 @@ pub(crate) struct RecordFormatter;
 
 impl RecordFormatter {
     pub fn to_raw_csv(
-        values: &Vec<Record>,
+        records: &Vec<Record>,
         range: Option<(usize, usize)>,
     ) -> Result<String, Box<dyn Error>> {
-        let mut string_records = vec![];
+        let mut string_records = vec!["count,probability,cost,constant,value".to_string()];
         let (min, max) = if let Some((min, max)) = range {
             (min, max)
         } else {
-            (0, values.len())
+            (0, records.len())
         };
-
-        for (index, value) in values.iter().enumerate() {
+        for (index, record) in records.iter().enumerate() {
             if index >= min && index <= max {
-                string_records.push(value.join_as_csv());
+                string_records.push(record.join_as_csv());
             }
         }
 

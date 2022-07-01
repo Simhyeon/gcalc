@@ -112,8 +112,8 @@ impl Default for PlotAttribute {
     fn default() -> Self {
         Self {
             caption: "Gcalc result".to_owned(),
-            prob_caption: "Prob".to_owned(),
-            cost_caption: "Cost".to_owned(),
+            prob_caption: "Prob (r)".to_owned(),
+            cost_caption: "Cost (b)".to_owned(),
             font_type: "Helvetica".to_owned(),
             font_size: 50,
             img_size: (1000, 1000),

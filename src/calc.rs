@@ -29,6 +29,7 @@ pub struct CalculatorOption {
     no_header: bool,
     strict: bool,
     target: Option<f32>,
+    value: Option<f32>,
     // Non-wasm exclusive options
     format: TableFormat,
     csv_ref: CsvRef, // -> For wasm it should be defined differently
@@ -62,6 +63,7 @@ impl CalculatorOption {
             no_header: false,
             strict: false,
             target: None,
+            value: None,
             column_map,
             // Non-wasm exclusive options
             format: TableFormat::CSV,
@@ -97,6 +99,7 @@ pub struct Calculator {
     prob_precision: Option<usize>,
     budget: Option<f32>,
     target_probability: Option<f32>,
+    target_value: Option<f32>,
     prob_type: ProbType,
     // Which behaviour to take when csv rows ends
     record_behaviour: CsvRecordBehaviour, // Strict option
@@ -119,6 +122,7 @@ impl Calculator {
             csv_invalid_behaviour: CSVInvalidBehaviour::None,
             prob_precision: None,
             target_probability: None,
+            target_value: None,
             budget: None,
             prob_type: ProbType::Fraction,
             record_behaviour: CsvRecordBehaviour::Repeat,
@@ -137,6 +141,7 @@ impl Calculator {
         self.csv_no_header = option.no_header;
         self.set_strict_csv(option.strict);
         self.target_probability = option.target;
+        self.target_value = option.value;
         self.column_map = option.column_map.clone();
         self.format = option.format;
         self.csv_ref = option.csv_ref.clone();
@@ -165,6 +170,11 @@ impl Calculator {
 
     pub fn target_probability(mut self, target_probability: f32) -> Self {
         self.target_probability.replace(target_probability);
+        self
+    }
+
+    pub fn value(mut self, value: f32) -> Self {
+        self.target_value.replace(value);
         self
     }
 
@@ -240,6 +250,7 @@ impl Calculator {
         self.csv_no_header = option.no_header;
         self.set_strict_csv(option.strict);
         self.target_probability = option.target;
+        self.target_value = option.value;
         self.column_map = option.column_map.clone();
         self.format = option.format;
         self.csv_ref = option.csv_ref.clone();
@@ -301,6 +312,10 @@ impl Calculator {
 
         self.target_probability.replace(target_probability);
         Ok(())
+    }
+
+    pub fn set_value(&mut self, value: f32) {
+        self.target_value.replace(value);
     }
 
     pub fn set_budget(&mut self, budget: f32) {
@@ -494,6 +509,7 @@ impl Calculator {
                 prob_str.to_owned(),
                 total_cost,
                 self.state.constant,
+                self.target_value.unwrap_or(0.0) * self.state.success_until,
             ));
 
             // If current probability is bigger than target_probability break
@@ -553,6 +569,7 @@ impl Calculator {
                     prob_str.to_owned(),
                     total_cost,
                     self.state.constant,
+                    self.target_value.unwrap_or(0.0) * self.state.success_until,
                 ));
 
                 // If and only if cursor is next,

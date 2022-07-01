@@ -98,6 +98,12 @@ impl Cli {
     fn common_app_args(app: clap::App) -> clap::App {
         let app = app
             .arg(
+                Arg::new("value")
+                    .help("Value of target item")
+                    .long("value")
+                    .takes_value(true),
+            )
+            .arg(
                 Arg::new("prob")
                     .help("Basic probability")
                     .short('p')
@@ -313,6 +319,13 @@ impl Cli {
         if let Some(prob) = args.value_of("prob") {
             let probability = utils::get_prob_alap(prob, None)?;
             cal.set_probability(probability, true)?;
+        }
+
+        if let Some(value) = args.value_of("value") {
+            let value = value
+                .parse::<f32>()
+                .map_err(|_| GcalcError::ParseError("Value should be a number".to_owned()))?;
+            cal.set_value(value);
         }
 
         if let Some(cost) = args.value_of("cost") {
