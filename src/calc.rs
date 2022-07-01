@@ -17,8 +17,6 @@ use crate::utils;
 use crate::{GcalcError, GcalcResult};
 #[cfg(feature = "option")]
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "tabled")]
-use tabled;
 
 #[cfg(feature = "option")]
 #[derive(Serialize, Deserialize)]
@@ -37,6 +35,13 @@ pub struct CalculatorOption {
     out_option: OutOption,
     column_map: HashMap<String, String>,
     plot: bool,
+}
+
+#[cfg(feature = "option")]
+impl Default for CalculatorOption {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg(feature = "option")]
@@ -287,7 +292,7 @@ impl Calculator {
     }
 
     pub fn set_target_probability(&mut self, target_probability: f32) -> GcalcResult<()> {
-        if target_probability > 1.0f32 || target_probability < 0.0f32 {
+        if !(0.0f32..=1.0f32).contains(&target_probability) {
             return Err(GcalcError::InvalidArgument(format!(
                 "Given probability \"{}\" is should be bigger than 0.0 and smaller than 1.0",
                 target_probability
@@ -407,9 +412,9 @@ impl Calculator {
             } else {
                 // No probability only budget
                 if self.state.cost == 0f32 {
-                    return Err(GcalcError::InvalidArgument(format!(
-                        "Cost should not be 0 if no reference was given as argument."
-                    )));
+                    return Err(GcalcError::InvalidArgument(
+                        "Cost should not be 0 if no reference was given as argument.".to_string(),
+                    ));
                 }
                 let count = (self.budget.unwrap() / self.state.cost).floor() as usize;
 
@@ -481,7 +486,7 @@ impl Calculator {
 
             // Because first try also consumes cost
             // total_cost should be calculated before push
-            total_cost = total_cost + self.state.cost;
+            total_cost += self.state.cost;
 
             records.push(Record::new(
                 record_index + 1,
@@ -541,7 +546,7 @@ impl Calculator {
                     &self.prob_precision,
                 );
 
-                total_cost = total_cost + self.state.cost;
+                total_cost += self.state.cost;
                 records.push(Record::new(
                     record_index + 1,
                     self.state.success_until,
@@ -598,7 +603,7 @@ impl Calculator {
     // </PROCESSING>
 
     // <INTERNAL>
-    fn update_state_from_csv_file<'a>(
+    fn update_state_from_csv_file(
         &mut self,
         csv_records: &mut impl Iterator<Item = Vec<String>>,
         index: usize,
@@ -638,7 +643,7 @@ impl Calculator {
         Ok(())
     }
 
-    fn get_count_from_row(&self, row: &Vec<String>, index: usize) -> GcalcResult<usize> {
+    fn get_count_from_row(&self, row: &[String], index: usize) -> GcalcResult<usize> {
         let count = &row[COUNT_INDEX];
         if count.is_empty() {
             // Index + 1 is the current index that is processing
@@ -653,10 +658,12 @@ impl Calculator {
         }
     }
 
-    fn set_prob_from_row(&mut self, row: &Vec<String>) -> GcalcResult<()> {
+    fn set_prob_from_row(&mut self, row: &[String]) -> GcalcResult<()> {
         let prob = &row[PROB_INDEX];
         let result = if prob.is_empty() {
-            Err(GcalcError::ParseError(format!("No probability in record")))
+            Err(GcalcError::ParseError(
+                "No probability in record".to_string(),
+            ))
         } else {
             // TODO Remove expect
             Ok(utils::get_prob_alap(&row[PROB_INDEX], None)?)
@@ -676,7 +683,7 @@ impl Calculator {
         Ok(())
     }
 
-    fn set_cost_from_row(&mut self, row: &Vec<String>, index: usize) -> GcalcResult<()> {
+    fn set_cost_from_row(&mut self, row: &[String], index: usize) -> GcalcResult<()> {
         let cost = &row[COST_INDEX];
         let result: GcalcResult<f32> = if cost.is_empty() {
             Ok(0.0f32)
@@ -706,10 +713,12 @@ impl Calculator {
         Ok(())
     }
 
-    fn set_constant_from_row(&mut self, row: &Vec<String>) -> GcalcResult<()> {
+    fn set_constant_from_row(&mut self, row: &[String]) -> GcalcResult<()> {
         let constant = &row[CONSTANT_INDEX];
         let result = if constant.is_empty() {
-            Err(GcalcError::ParseError(format!("No const value in record")))
+            Err(GcalcError::ParseError(
+                "No const value in record".to_string(),
+            ))
         } else {
             // TODO Remove expect
             Ok(utils::get_prob_alap(&row[CONSTANT_INDEX], None)?)
@@ -733,36 +742,37 @@ impl Calculator {
     fn calculate_fail_success(&mut self) -> GcalcResult<()> {
         // Current indenpendent success rate
         let success = (self.state.probability + self.state.constant).min(1.0f32);
-        self.state.success_until = self.state.success_until + self.state.fail_until * success;
+        self.state.success_until += self.state.fail_until * success;
         let fail_prob = (1f32 - success).max(0.0f32);
         // Fail until is multiplied
-        self.state.fail_until = self.state.fail_until * fail_prob;
+        self.state.fail_until *= fail_prob;
         Ok(())
     }
 
     fn conditional_sanity_check(&self) -> GcalcResult<()> {
         // Both empty
         if self.target_probability == None && self.budget == None {
-            return Err(GcalcError::InvalidConditional(format!(
-                "Either target probability or budget should be present"
-            )));
+            return Err(GcalcError::InvalidConditional(
+                "Either target probability or budget should be present".to_string(),
+            ));
         }
 
         if self.csv_ref == CsvRef::None {
             // No ref file
             if self.budget != None && self.state.cost == 0.0 {
-                return Err(GcalcError::InvalidConditional(format!(
-                    "0 cost with budget will incur infinite loop"
-                )));
+                return Err(GcalcError::InvalidConditional(
+                    "0 cost with budget will incur infinite loop".to_string(),
+                ));
             }
             if self.target_probability != None && self.state.probability == 0.0 {
-                return Err(GcalcError::InvalidConditional(format!(
+                return Err(GcalcError::InvalidConditional(
                     "0 probability with static target probability will incur infinite loop"
-                )));
+                        .to_string(),
+                ));
             }
             if let Some(num) = self.target_probability {
                 if num == 1.0f32 && self.state.constant < 1.0f32 {
-                    return Err(GcalcError::InvalidConditional(format!("1.0 probability cannot be reached. Use reference file if you need tailored control over probability.")));
+                    return Err(GcalcError::InvalidConditional("1.0 probability cannot be reached. Use reference file if you need tailored control over probability.".to_string()));
                 }
             }
         }
@@ -874,8 +884,9 @@ pub enum TableFormat {
     Console,
 }
 
-impl TableFormat {
-    pub fn from_str(string: &str) -> GcalcResult<Self> {
+impl std::str::FromStr for TableFormat {
+    type Err = GcalcError;
+    fn from_str(string: &str) -> GcalcResult<Self> {
         match string.to_lowercase().as_str() {
             #[cfg(feature = "tabled")]
             "console" => Ok(Self::Console),

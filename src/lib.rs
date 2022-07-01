@@ -24,7 +24,6 @@ mod calc;
 #[cfg(feature = "binary")]
 pub mod cli;
 mod consts;
-mod csv;
 mod error;
 mod formatter;
 mod models;

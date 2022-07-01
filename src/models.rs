@@ -1,19 +1,21 @@
 use std::path::PathBuf;
+use std::str::FromStr;
 
-use serde::Serialize;
+use crate::GcalcError;
 #[cfg(feature = "option")]
 use serde::Deserialize;
+#[cfg(feature = "option")]
+use serde::Serialize;
 #[cfg(feature = "tabled")]
 use tabled::Tabled;
-use crate::GcalcError;
 
 pub type GcalcResult<T> = Result<T, GcalcError>;
 
-#[cfg_attr(feature= "tabled" ,derive(Tabled))]
+#[cfg_attr(feature = "tabled", derive(Tabled))]
 pub(crate) struct Qualficiation {
     pub count: usize,
     pub probability: String,
-    pub cost : f32,
+    pub cost: f32,
 }
 
 impl Qualficiation {
@@ -28,16 +30,16 @@ impl Qualficiation {
     pub fn join_as_csv(&self) -> String {
         let mut joined = self.count.to_string();
         joined.push_str(&format!(",{}", self.probability));
-        joined.push_str(&format!(",{}", self.cost.to_string()));
+        joined.push_str(&format!(",{}", self.cost));
         joined
     }
 }
 
-#[cfg_attr(feature= "tabled" ,derive(Tabled))]
+#[cfg_attr(feature = "tabled", derive(Tabled))]
 pub(crate) struct FormatRecord {
     pub count: usize,
-    pub probability : String,
-    pub cost : f32,
+    pub probability: String,
+    pub cost: f32,
     pub constant: f32,
 }
 
@@ -46,7 +48,7 @@ impl FormatRecord {
         Self {
             count: record.count,
             probability: record.probability.to_string(),
-            cost : record.cost,
+            cost: record.cost,
             constant: record.constant,
         }
     }
@@ -55,13 +57,19 @@ impl FormatRecord {
 pub(crate) struct Record {
     pub count: usize,
     pub probability_src: f32,
-    pub probability : String,
-    pub cost : f32,
+    pub probability: String,
+    pub cost: f32,
     pub constant: f32,
 }
 
 impl Record {
-    pub fn new(count: usize, probability_src: f32, probability: String, cost: f32, constant: f32) -> Self {
+    pub fn new(
+        count: usize,
+        probability_src: f32,
+        probability: String,
+        cost: f32,
+        constant: f32,
+    ) -> Self {
         Self {
             count,
             probability_src,
@@ -74,13 +82,13 @@ impl Record {
     pub fn join_as_csv(&self) -> String {
         let mut joined = self.count.to_string();
         joined.push_str(&format!(",{}", self.probability));
-        joined.push_str(&format!(",{}", self.cost.to_string()));
-        joined.push_str(&format!(",{}", self.constant.to_string()));
+        joined.push_str(&format!(",{}", self.cost));
+        joined.push_str(&format!(",{}", self.constant));
         joined
     }
 }
 
-#[cfg_attr(feature= "option" ,derive(Serialize, Deserialize, Clone))]
+#[cfg_attr(feature = "option", derive(Serialize, Deserialize, Clone))]
 #[derive(PartialEq)]
 pub enum CsvRef {
     Raw(String),
@@ -88,7 +96,7 @@ pub enum CsvRef {
     None,
 }
 
-#[cfg_attr(feature= "option" ,derive(Serialize, Deserialize,Clone,Copy))]
+#[cfg_attr(feature = "option", derive(Serialize, Deserialize, Clone, Copy))]
 #[derive(PartialEq)]
 pub enum CSVInvalidBehaviour {
     Rollback,
@@ -102,13 +110,18 @@ impl CSVInvalidBehaviour {
             "rollback" => Self::Rollback,
             "ignore" => Self::Ignore,
             "none" => Self::None,
-            _ => return Err(GcalcError::InvalidConversion(format!("{} is not a valid csv fallback behaviour variant", text))),
+            _ => {
+                return Err(GcalcError::InvalidConversion(format!(
+                    "{} is not a valid csv fallback behaviour variant",
+                    text
+                )))
+            }
         };
         Ok(varirant)
     }
 }
 
-#[cfg_attr(feature= "option" ,derive(Serialize, Deserialize,Clone))]
+#[cfg_attr(feature = "option", derive(Serialize, Deserialize, Clone))]
 pub enum OutOption {
     Console,
     File(PathBuf),
@@ -119,19 +132,22 @@ pub enum RecordCursor {
     Stay,
 }
 
-#[cfg_attr(feature= "option" ,derive(Serialize, Deserialize,Clone,Copy))]
+#[cfg_attr(feature = "option", derive(Serialize, Deserialize, Clone, Copy))]
 pub enum ProbType {
     Percentage,
     Fraction,
 }
 
-impl ProbType {
-    pub fn from_str(string : &str) -> GcalcResult<Self> {
-        match string.to_lowercase().as_str() {
+impl FromStr for ProbType {
+    type Err = GcalcError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
             "percentage" | "percent" => Ok(Self::Percentage),
             "float" => Ok(Self::Fraction),
-            _ => Err(GcalcError::InvalidConversion(format!("{} is not a valid table format", string))),
+            _ => Err(GcalcError::InvalidConversion(format!(
+                "{} is not a valid table format",
+                s
+            ))),
         }
     }
 }
-

@@ -4,6 +4,7 @@ use crate::{
 };
 use clap::{App, Arg, ArgMatches};
 use std::io::Write;
+use std::str::FromStr;
 use std::{collections::HashMap, io::Read, iter::FromIterator, path::PathBuf};
 
 pub struct Cli;
@@ -305,8 +306,8 @@ impl Cli {
     fn set_calculator_attribute(cal: &mut Calculator, args: &ArgMatches) -> GcalcResult<()> {
         #[cfg(feature = "option")]
         if let Some(file) = args.value_of("option") {
-            let mut option = CalculatorOption::from_file(std::path::Path::new(file))?;
-            cal.set_option(&mut option);
+            let option = CalculatorOption::from_file(std::path::Path::new(file))?;
+            cal.set_option(&option);
         }
 
         if let Some(prob) = args.value_of("prob") {

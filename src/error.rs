@@ -1,5 +1,5 @@
-use std::string::FromUtf8Error;
 use std::num::ParseFloatError;
+use std::string::FromUtf8Error;
 
 use cindex::CIndexError;
 use thiserror::Error;
@@ -34,26 +34,25 @@ pub enum GcalcError {
 }
 
 impl From<std::io::Error> for GcalcError {
-    fn from(err : std::io::Error) -> Self {
+    fn from(err: std::io::Error) -> Self {
         Self::StdIo(err)
     }
 }
 
 impl From<FromUtf8Error> for GcalcError {
-    fn from(err : FromUtf8Error) -> Self {
+    fn from(err: FromUtf8Error) -> Self {
         Self::InvalidStringConversion(err)
     }
 }
 
-
 impl From<ParseFloatError> for GcalcError {
-    fn from(err : ParseFloatError) -> Self {
+    fn from(err: ParseFloatError) -> Self {
         Self::ParseError(err.to_string())
     }
 }
 
 impl From<CIndexError> for GcalcError {
-    fn from(err : CIndexError) -> Self {
+    fn from(err: CIndexError) -> Self {
         Self::CIndexError(err)
     }
 }
