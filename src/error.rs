@@ -2,35 +2,46 @@ use std::num::ParseFloatError;
 use std::string::FromUtf8Error;
 
 use cindex::CIndexError;
-use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Debug)]
 pub enum GcalcError {
-    #[error("Foramtting fail : {0}")]
     FormatFail(Box<dyn std::error::Error>),
-    #[error("Invalid argument : {0}")]
     InvalidArgument(String),
-    #[error("Standard IO error\n= {0}")]
     StdIo(std::io::Error),
-    #[error("Invalid csv error\n= {0}")] // This is logic error
     CsvError(String),
-    #[error("Invalid probability form\n= {0}")]
     InvalidProb(String),
-    #[error("Invalid conversion\n= {0}")]
     InvalidConversion(String),
-    #[error("Invalid conditional calculation\n= {0}")]
     InvalidConditional(String),
-    #[error("Invalid characters in input\n= {0}")]
     InvalidStringConversion(FromUtf8Error),
-    #[error("Failed to parse a value \n= {0}")]
     ParseError(String),
-    #[error("Unknown error \n= {0}")]
     Unknown(String),
     #[cfg(feature = "plotters")]
-    #[error("Failed to create plot image \n= {0}")]
     PlotError(String),
-    #[error("{0}")]
     CIndexError(CIndexError),
+}
+
+impl std::fmt::Display for GcalcError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::FormatFail(err) => write!(f, "Foramtting fail : {}", err),
+            Self::InvalidArgument(err) => write!(f, "Invalid argument : {}", err),
+            Self::StdIo(err) => write!(f, "Standard IO error\n= {}", err),
+            Self::CsvError(err) => write!(f, "Invalid csv error\n= {}", err), // This is logic error
+            Self::InvalidProb(err) => write!(f, "Invalid probability form\n= {}", err),
+            Self::InvalidConversion(err) => write!(f, "Invalid conversion\n= {}", err),
+            Self::InvalidConditional(err) => {
+                write!(f, "Invalid conditional calculation\n= {}", err)
+            }
+            Self::InvalidStringConversion(err) => {
+                write!(f, "Invalid characters in input\n= {}", err)
+            }
+            Self::ParseError(err) => write!(f, "Failed to parse a value \n= {}", err),
+            Self::Unknown(err) => write!(f, "Unknown error \n= {}", err),
+            #[cfg(feature = "plotters")]
+            Self::PlotError(err) => write!(f, "Failed to create plot image \n= {}", err),
+            Self::CIndexError(err) => write!(f, "{}", err),
+        }
+    }
 }
 
 impl From<std::io::Error> for GcalcError {
