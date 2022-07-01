@@ -390,6 +390,7 @@ impl Calculator {
         let total_count: usize;
         let total_cost: f32;
         let final_probability: String;
+        let value: f32;
 
         // Simply calculate geometric series
         if let CsvRef::None = self.csv_ref {
@@ -398,6 +399,7 @@ impl Calculator {
                 total_cost = self.state.cost;
                 final_probability =
                     utils::get_prob_as_formatted(1.0f32, &self.prob_type, &self.prob_precision);
+                value = 1.0f32 * self.target_value.unwrap_or(0f32);
             }
             // Probability and possibly with budget
             else if let Some(target) = self.target_probability {
@@ -416,14 +418,13 @@ impl Calculator {
                 };
                 total_count = count;
                 total_cost = count as f32 * self.state.cost;
-                final_probability = utils::get_prob_as_formatted(
-                    utils::geometric_series(
-                        total_count,
-                        self.state.probability + self.state.constant,
-                    ),
-                    &self.prob_type,
-                    &self.prob_precision,
+                let prob = utils::geometric_series(
+                    total_count,
+                    self.state.probability + self.state.constant,
                 );
+                final_probability =
+                    utils::get_prob_as_formatted(prob, &self.prob_type, &self.prob_precision);
+                value = prob * self.target_value.unwrap_or(0f32);
             } else {
                 // No probability only budget
                 if self.state.cost == 0f32 {
@@ -435,14 +436,13 @@ impl Calculator {
 
                 total_count = count;
                 total_cost = count as f32 * self.state.cost;
-                final_probability = utils::get_prob_as_formatted(
-                    utils::geometric_series(
-                        total_count,
-                        self.state.probability + self.state.constant,
-                    ),
-                    &self.prob_type,
-                    &self.prob_precision,
+                let prob = utils::geometric_series(
+                    total_count,
+                    self.state.probability + self.state.constant,
                 );
+                final_probability =
+                    utils::get_prob_as_formatted(prob, &self.prob_type, &self.prob_precision);
+                value = prob * self.target_value.unwrap_or(0f32);
             }
         } else {
             let records = self.create_records(false)?;
@@ -453,9 +453,10 @@ impl Calculator {
             let last_record = &records[0];
             total_cost = last_record.cost;
             final_probability = last_record.probability.clone();
+            value = last_record.probability_src * self.target_value.unwrap_or(0f32);
         }
 
-        self.print_qual_table(total_count, total_cost, &final_probability)?;
+        self.print_qual_table(total_count, total_cost, &final_probability, value)?;
 
         Ok(())
     }
@@ -820,19 +821,25 @@ impl Calculator {
         Ok(())
     }
 
-    fn print_qual_table(&self, count: usize, cost: f32, probability: &str) -> GcalcResult<()> {
+    fn print_qual_table(
+        &self,
+        count: usize,
+        cost: f32,
+        probability: &str,
+        value: f32,
+    ) -> GcalcResult<()> {
         let formatted = match self.format {
             TableFormat::CSV => {
-                QualFormatter::to_csv_table(Qualficiation::new(count, cost, probability))?
+                QualFormatter::to_csv_table(Qualficiation::new(count, cost, probability, value))?
             }
             #[cfg(feature = "tabled")]
             TableFormat::Console => QualFormatter::to_styled_table(
-                Qualficiation::new(count, cost, probability),
+                Qualficiation::new(count, cost, probability, value),
                 tabled::Style::default(),
             ),
             #[cfg(feature = "tabled")]
             TableFormat::GFM => QualFormatter::to_styled_table(
-                Qualficiation::new(count, cost, probability),
+                Qualficiation::new(count, cost, probability, value),
                 tabled::Style::github_markdown(),
             ),
         };

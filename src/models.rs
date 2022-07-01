@@ -16,14 +16,16 @@ pub(crate) struct Qualficiation {
     pub count: usize,
     pub probability: String,
     pub cost: f32,
+    pub value: f32,
 }
 
 impl Qualficiation {
-    pub fn new(count: usize, cost: f32, probability: &str) -> Self {
+    pub fn new(count: usize, cost: f32, probability: &str, value: f32) -> Self {
         Self {
             count,
             cost,
             probability: probability.to_owned(),
+            value,
         }
     }
 
@@ -41,7 +43,7 @@ pub(crate) struct FormatRecord {
     pub probability: String,
     pub cost: f32,
     pub constant: f32,
-    pub expected_value: f32,
+    pub value: f32,
 }
 
 impl FormatRecord {
@@ -51,7 +53,7 @@ impl FormatRecord {
             probability: record.probability.to_string(),
             cost: record.cost,
             constant: record.constant,
-            expected_value: record.value.round(),
+            value: record.value.round(),
         }
     }
 }
