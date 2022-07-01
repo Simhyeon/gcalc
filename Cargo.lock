@@ -43,31 +43,47 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "cindex"
-version = "0.3.3"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfc22ccc6cf34486236fd5e2fbab5ffa3e8a050d26a33701793fc4e6a6447813"
+checksum = "a448c1d93d1a277da294968263c24acb6c671328d69448b236ecdc51261d680a"
 dependencies = [
- "bitflags",
- "indexmap",
+ "dcsv",
  "regex",
- "thiserror",
 ]
 
 [[package]]
 name = "clap"
-version = "3.0.14"
+version = "3.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b63edc3f163b3c71ec8aa23f9bd6070f77edbf3d1d198b164afa90ff00e4ec62"
+checksum = "190814073e85d238f31ff738fcb0bf6910cedeb73376c87cd69291028966fd83"
 dependencies = [
  "bitflags",
+ "clap_lex",
  "indexmap",
- "os_str_bytes",
  "textwrap",
 ]
 
 [[package]]
+name = "clap_lex"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2850f2f5a82cbf437dd5af4d49848fbdfc27c157c3d010345776f952765261c5"
+dependencies = [
+ "os_str_bytes",
+]
+
+[[package]]
+name = "dcsv"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "708018f722a65d03ccf4585053d33dfe23cd7da472bdf090975be0fb54e11930"
+dependencies = [
+ "regex",
+]
+
+[[package]]
 name = "gcalc"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "cindex",
  "clap",
@@ -158,9 +174,6 @@ name = "os_str_bytes"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e22443d1643a904602595ba1cd8f7d896afe56d26712531c5ff73a15b2fbf64"
-dependencies = [
- "memchr",
-]
 
 [[package]]
 name = "papergrid"
@@ -305,9 +318,9 @@ dependencies = [
 
 [[package]]
 name = "textwrap"
-version = "0.14.2"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0066c8d12af8b5acd21e00547c3797fde4e8677254a7ee429176ccebbe93dd80"
+checksum = "b1141d4d61095b28419e22cb0bbf02755f5e54e0526f97f1e3d1d160e60885fb"
 
 [[package]]
 name = "thiserror"
