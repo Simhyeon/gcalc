@@ -20,7 +20,7 @@ path = "src/lib.rs"
 
 [features]
 binary = ["clap", "option", "tabled", "plotters"]
-option = ["serde_json"]
+option = ["dep:serde_json"]
 
 [dependencies]
 clap = { version = "3.2.8", default-features = false, features = ["std"], optional=true}
