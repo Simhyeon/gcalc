@@ -1,17 +1,6 @@
 # TODO
 
-* [-] Make several arguemtns as global for maintainability
-	- You can't because, subcommand parsing only get's sub command matches not whole matches...
-
-* [ ] Ok, this crate has some missing contexts...
-	- This calculator is not about at least once.
-	- But about how many chances are needed if we want users to get an item.
-	- Thus, geometric sequence is also a solution for only a single time
-	- But, if the answer is about at least once, then it is much more easier
-	- Of course, it will not work will dynamic calculation though,
-	- I can also modify the case for at "least once".
-
-* [ ] Make crate compatible with docs.rs
+* [x] Make crate compatible with docs.rs
 * [ ] Probe if library usage is ergonmic enough
 * [ ] Create website
 	* [x] Segregate www directory
@@ -77,6 +66,19 @@ print cost
 * [x] Make proper readme (Demo usage)
 * [-] Ergonomic library usage
 * [x] Prevent infinite loop
+
+* [x] Make expected value with value option
+* [-] Make several arguemtns as global for maintainability
+	- You can't because, subcommand parsing only get's sub command matches not whole matches...
+
+* [-] Ok, this crate has some missing contexts...
+	- This calculator is not about at least once.
+	- But about how many chances are needed if we want users to get an item.
+	- Thus, geometric sequence is also a solution for only a single time
+	- But, if the answer is about at least once, then it is much more easier
+	- Of course, it will not work will dynamic calculation though,
+	- I can also modify the case for at "least once".
+	- I don't that case is the burden of this crate thus, it will not be implemented
 
 
 ### First usage

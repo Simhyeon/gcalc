@@ -8,6 +8,8 @@ counts, but calculate expected effects of the "tries". Such expectation can be
 used to decide how many tries should be given to users, assess the economical
 effect that game events might occur and so on and so forth.
 
+[Changes](./docs/change.md)
+
 ## Usage
 
 ```bash
