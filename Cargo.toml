@@ -21,6 +21,7 @@ path = "src/lib.rs"
 [features]
 binary = ["clap", "option", "tabled", "plotters"]
 option = ["dep:serde_json"]
+wasm = ["dep:wasm-bindgen", "dep:wee_alloc"]
 
 [dependencies]
 clap = { version = "3.2.8", default-features = false, features = ["std"], optional=true}
